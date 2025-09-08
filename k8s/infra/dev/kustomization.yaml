@@ -20,5 +20,17 @@ resources:
   - redis-pvc.yaml
   - keycloak-pvc.yaml
   - n8n-pvc.yaml
+  
+  # ArgoCD Resources
+  - argocd-namespace.yaml
+  - argocd-secret.yaml
+  - argocd-pvc.yaml
+  - argocd-configmap.yaml
+  - argocd-additional-configmaps.yaml
+  - argocd-serviceaccount.yaml
+  - argocd-rbac.yaml
+  - argocd-deployment.yaml
+  - argocd-service.yaml
+  - argocd-ingress.yaml
 
 # secretGenerator removed; secrets are explicit manifests for dev only

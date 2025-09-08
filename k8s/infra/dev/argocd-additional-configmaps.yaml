@@ -1,0 +1,180 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Application controller configuration
+  controller.status.processors: "20"
+  controller.operation.processors: "10"
+  controller.self.heal.timeout.seconds: "5"
+  controller.repo.server.timeout.seconds: "60"
+  
+  # Repository server configuration
+  reposerver.parallelism.limit: "0"
+  
+  # Server configuration
+  server.insecure: "true"
+  server.basehref: "/"
+  server.rootpath: "/"
+  server.grpc.web: "true"
+  server.enable.proxy.extension: "false"
+  server.disable.auth: "false"
+  
+  # DEX configuration
+  server.dex.server: "https://argocd-dex-server:5554"
+  server.dex.server.strict.tls: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-gpg-keys-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-gpg-keys-cm
+    app.kubernetes.io/part-of: argocd
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-notifications-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  config.yaml: |
+    triggers:
+      - name: on-sync-status-unknown
+        condition: app.status.sync.status == 'Unknown'
+        template: app-sync-status
+      - name: on-sync-succeeded
+        condition: app.status.operationState.phase in ['Succeeded'] and app.status.sync.status == 'Synced'
+        template: app-sync-succeeded
+      - name: on-sync-failed
+        condition: app.status.operationState.phase in ['Error', 'Failed']
+        template: app-sync-failed
+      - name: on-health-degraded
+        condition: app.status.health.status == 'Degraded'
+        template: app-health-degraded
+    
+    templates:
+      - name: app-sync-status
+        title: Application sync is 'Unknown'
+        body: |
+          {{if eq .recipient.service.name "slack"}}:exclamation:{{end}} Application {{.app.metadata.name}} sync is 'Unknown'.
+          Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
+      - name: app-sync-succeeded
+        title: Application synced successfully
+        body: |
+          {{if eq .recipient.service.name "slack"}}:white_check_mark:{{end}} Application {{.app.metadata.name}} is now running new version.
+          Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
+      - name: app-sync-failed
+        title: Application sync failed
+        body: |
+          {{if eq .recipient.service.name "slack"}}:exclamation:{{end}} The sync operation of application {{.app.metadata.name}} has failed at {{.app.status.operationState.finishedAt}} with the following error: {{.app.status.operationState.message}}
+          Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
+      - name: app-health-degraded
+        title: Application has degraded
+        body: |
+          {{if eq .recipient.service.name "slack"}}:exclamation:{{end}} Application {{.app.metadata.name}} has degraded.
+          Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    p, role:admin, applications, *, */*, allow
+    p, role:admin, clusters, *, *, allow
+    p, role:admin, repositories, *, *, allow
+    p, role:admin, certificates, *, *, allow
+    p, role:admin, accounts, *, *, allow
+    p, role:admin, gpgkeys, *, *, allow
+    
+    g, argocd-admins, role:admin
+    g, system:masters, role:admin
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-ssh-known-hosts-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-ssh-known-hosts-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  ssh_known_hosts: |
+    # github.com
+    github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+    # gitlab.com
+    gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+    gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7k0VhjaxrXhyJyS+Ox7GUCdHBEf8F7+OSqEJjxW+0pP3hmY7p55YBqXSGde1f0P8qMF6S2Lk4SwjRHPOLdMuZ5oclL5Seyck9q8P4fwUkOGQ8T4bW2lGk5ld4RjjmGVOTQm9Ln1V9mLNFmFu3MGx3DV8usJfTqnLx+Cf7N/khtGv7asZ8HjjpC5IB7D2nOt8xLsdDGl7JJYFe4pYxH3XJlCmsEGXmQ8O+Av1xt3L4C
+    # bitbucket.org  
+    bitbucket.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIazEu89wgQZ4bqs3d63QSMzYVa0MuJ2e2gKTKqu+UUO
+    bitbucket.org ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDQeJzhupRu0u0cdegZIa8e86EG2qOCsIsD1Xw0xSeiPDlCr7kq97NLmMbpKTX6Esc30NuoqEEHQoTuKLxIxwvfckNuP8WGOfgT3C1Tez2VOI5O9Vb8k8v4QvmETdGnH8uN7b2UNfHBfbV1BCxYJtA/pG9K9Dx+NbJ8Yu4LaLIkRlqNzX7rY2TdVz7Lol3xnO0PKp9l0Zb6CklUs8X0T1s2LTy8kZhdhKWjZG1NuAbLT8Mc+i8wd5qPGteFrTHx7uU9vlZkJPH/ygFNK0OW6ACerBdPM+6F+6DByGHBLiJhQizgvIEhU9WsBkLGmWJj3xKnjTG1YJDLlcHb5dQPV7IUzR1VIWrJ/T3hrS9R7XHIz3qRVFZBQyOe6K7gEp2Y6jbxBd4TKoAJhxzFO0yb6r4VVvdlVvOzXGFWobR0KYB7+AYSZZGRE2qgA1BgstdgQdVPGqduTaP6qOHSROJdUwb8MzHXD0/8Ldzl2qkxX9toixrHw0Xf5mgDojsKUNZ3pVNf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-tls-certs-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-tls-certs-cm
+    app.kubernetes.io/part-of: argocd
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-dex-server-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-dex-server-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  dex.yaml: |
+    logger:
+      level: debug
+      format: text
+    web:
+      http: 0.0.0.0:5556
+      allowedOrigins: ['*']
+    telemetry:
+      http: 0.0.0.0:5558
+    grpc:
+      addr: 0.0.0.0:5557
+      reflection: true
+    connectors:
+      - type: oidc
+        id: keycloak
+        name: Keycloak
+        config:
+          issuer: https://keycloak.dev.smartcity.local/auth/realms/master
+          clientID: argocd
+          clientSecret: argocd-secret
+          requestedScopes: ["openid", "profile", "email", "groups"]
+          requestedIDTokenClaims: {"groups": {"essential": true}}
+          insecureEnableGroups: true
+          insecureSkipEmailVerified: true
+          getUserInfo: true
+    oauth2:
+      skipApprovalScreen: true
+    staticClients:
+    - id: argo-cd
+      redirectURIs:
+      - 'https://argocd.dev.smartcity.local/auth/callback'
+      name: 'Argo CD'
+      secret: ZXhhbXBsZS1hcHAtc2VjcmV0
+    enablePasswordDB: false

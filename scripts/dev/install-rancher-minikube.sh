@@ -14,7 +14,7 @@ set -euo pipefail
 # ====================================================================================
 # Domínio de acesso ao Rancher. Usamos .local para evitar conflitos com o TLD
 # protegido .localhost e garantir a correta resolução via /etc/hosts.
-INGRESS_HOST="rancher.local"
+INGRESS_HOST="rancher.dev.smartcity.local"
 # Namespace onde os componentes core do Rancher serão instalados.
 NAMESPACE="cattle-system"
 # Versão do Rancher. Fixar a versão garante a consistência entre ambientes.
@@ -86,14 +86,14 @@ function check_node_resources_or_prompt() {
   fi
 
   echo "Cluster allocatable: CPU=${CPU_M}m, MEM=${MEM_MI}Mi"
-  if (( CPU_M < 2000 )) || (( MEM_MI < 4096 )); then
-    echo "Recursos do cluster abaixo do recomendado (2 CPU / 4Gi)."
-    read -r -p "Deseja reiniciar o Minikube com 4 CPU e 8Gi de RAM agora? (recomendado para Rancher) (y/N): " resp
+  if (( CPU_M < 2000 )) || (( MEM_MI < 6144clear )); then
+    echo "Recursos do cluster abaixo do recomendado (2 CPU / 6Gi)."
+    read -r -p "Deseja reiniciar o Minikube com 4 CPU e 6Gi de RAM agora? (recomendado para Rancher) (y/N): " resp
     if [[ "$resp" =~ ^[Yy]$ ]]; then
       echo "Reiniciando Minikube com recursos aumentados..."
       minikube stop || true
       minikube delete --all --purge || true
-      minikube start --driver=docker --cpus=4 --memory=8192
+      minikube start --driver=docker --cpus=4 --memory=6144 --disk-size=20gb
       echo "Minikube reiniciado. Aguarde alguns segundos para o cluster estabilizar."
     else
       echo "Continuando sem alterar recursos (pode falhar se insuficiente)."
