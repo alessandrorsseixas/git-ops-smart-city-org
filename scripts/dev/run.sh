@@ -72,7 +72,6 @@ sequence=(
   "install-rancher-minikube.sh"
   "install-ingress.sh"
   "install-cert.sh"
-  # "deploy/deploy-all.sh"
 )
 
 # Se componentes foram passados, filtrar a sequência
