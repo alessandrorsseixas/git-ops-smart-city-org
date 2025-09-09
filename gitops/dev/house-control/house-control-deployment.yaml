@@ -2,32 +2,37 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: house-control
-  namespace: smart-city
+  namespace: smartcity
   labels:
-    app: house-control
+    app: house-control-container
     component: application
     environment: development
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: house-control
+      app: house-control-container
   template:
     metadata:
       labels:
-        app: house-control
+        app: house-control-container
         component: application
         environment: development
     spec:
       containers:
-      - name: house-control
-        image: house-control:latest  # Replace with your actual image
+      - name: house-control-container
+        image: ghcr.io/alessandrorsseixas/smart-city-org/house-control:tag-do-commit
         ports:
         - containerPort: 8080
           name: http
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "dev"
+        envFrom:
+        - configMapRef:
+            name: house-control-config
+        - secretRef:
+            name: house-control-secret
         volumeMounts:
         - name: config-volume
           mountPath: /app/config
@@ -58,22 +63,3 @@ spec:
       - name: config-volume
         configMap:
           name: house-control-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: house-control
-  namespace: smart-city
-  labels:
-    app: house-control
-    component: application
-    environment: development
-spec:
-  ports:
-  - port: 8080
-    targetPort: 8080
-    protocol: TCP
-    name: http
-  selector:
-    app: house-control
-  type: ClusterIP

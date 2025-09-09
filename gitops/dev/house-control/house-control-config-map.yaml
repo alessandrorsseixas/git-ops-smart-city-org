@@ -4,7 +4,7 @@ metadata:
   name: house-control-config
   namespace: smartcity
   labels:
-    app: house-control
+    app: house-control-container
     component: application
     environment: development
 data:

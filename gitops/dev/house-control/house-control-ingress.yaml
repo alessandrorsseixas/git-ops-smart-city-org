@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: house-control-ingress
+spec:
+  # Define qual Ingress Controller deve atender a este recurso.
+  ingressClassName: nginx
+  rules:
+  # Lista de regras de roteamento.
+  - host: house-control.local # Um hostname para acesso local.
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            # Nome do Service que criamos anteriormente.
+            name: house-control-svc
+            port:
+              # Porta do Service para a qual o Ingress vai rotear.
+              number: 80
