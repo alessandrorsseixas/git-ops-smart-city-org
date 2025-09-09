@@ -1,109 +1,286 @@
-# Dev infra (k8s/infra/dev)
+# Smart City Infrastructure - Kustomize Structure
 
-This folder contains Kubernetes manifests for local development (Minikube).
+Este documento explica a estrutura organizada do Kustomize para a infraestrutura do Smart City.
 
-## Structure
+## 📁 Estrutura de Diretórios
 
-### Deployments & StatefulSets
-- `postgres-statefulset.yaml` - PostgreSQL database
-- `redis-deployment.yaml` - Redis cache
-- `rabbitmq-deployment.yaml` - RabbitMQ message broker  
-- `keycloak-deployment.yaml` - Keycloak identity provider
-- `argocd-deployment.yaml` - ArgoCD GitOps controller and UI
+```
+k8s/infra/dev/
+├── kustomization.yaml          # Kustomization principal
+├── mongo/                      # MongoDB
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── postgres/                   # PostgreSQL
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── redis/                      # Redis
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── rabbitmq/                   # RabbitMQ
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── keycloack/                  # Keycloak
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── argocd/                     # ArgoCD
+│   ├── kustomization.yaml
+│   └── [manifests...]
+└── n8n-pvc.yaml               # PVC adicional
+```
 
-### Secrets
-- `postgres-secret.yaml` - PostgreSQL credentials
-- `redis-secret.yaml` - Redis configuration
-- `rabbitmq-secret.yaml` - RabbitMQ credentials
-- `keycloak-secret.yaml` - Keycloak admin credentials
-- `argocd-secret.yaml` - ArgoCD admin credentials and OIDC config
+## 🏗️ Arquitetura do Kustomize
 
-**⚠️ WARNING:** Secrets here are dev-only and use `stringData` with placeholder values.
-**DO NOT use these secrets in production.**
+### Kustomization Principal (`kustomization.yaml`)
 
-### Persistent Volume Claims (PVCs)
-- `postgres-pvc.yaml` - PostgreSQL data storage (5Gi)
-- `mongodb-pvc.yaml` - MongoDB data storage (3Gi)
-- `rabbitmq-pvc.yaml` - RabbitMQ data storage (2Gi)
-- `redis-pvc.yaml` - Redis data storage (1Gi)
-- `keycloak-pvc.yaml` - Keycloak data storage (1Gi)
-- `n8n-pvc.yaml` - n8n workflow data storage (2Gi)
-- `argocd-pvc.yaml` - ArgoCD data storage (10Gi repo-server, 5Gi server)
+O arquivo principal coordena todos os componentes:
 
-### ArgoCD GitOps Resources
-- `argocd-namespace.yaml` - ArgoCD namespace
-- `argocd-configmap.yaml` - ArgoCD main configuration
-- `argocd-additional-configmaps.yaml` - Additional ArgoCD configurations
-- `argocd-serviceaccount.yaml` - Service accounts for ArgoCD components
-- `argocd-rbac.yaml` - RBAC roles and bindings
-- `argocd-service.yaml` - Services for ArgoCD components
-- `argocd-ingress.yaml` - Ingress for ArgoCD UI and GRPC access
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 
-## Usage
+metadata:
+  name: smartcity-infrastructure
+  namespace: smartcity
 
-### Deploy ArgoCD (Quick Start)
+resources:
+  - mongo/          # Referencia kustomization.yaml do mongo
+  - postgres/       # Referencia kustomization.yaml do postgres
+  - redis/          # Referencia kustomization.yaml do redis
+  - rabbitmq/       # Referencia kustomization.yaml do rabbitmq
+  - keycloack/      # Referencia kustomization.yaml do keycloak
+  - argocd/         # Referencia kustomization.yaml do argocd
+  - n8n-pvc.yaml    # PVC individual
+```
+
+### Kustomization por Componente
+
+Cada componente tem seu próprio `kustomization.yaml`:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: [component-name]
+  namespace: smartcity
+
+commonLabels:
+  app: [component-name]
+  component: [component-type]
+  environment: development
+  managed-by: kustomize
+
+resources:
+  - [component]-secret.yaml
+  - [component]-configmap.yaml
+  - [component]-pvc.yaml
+  - [component]-deployment.yaml
+  # ... outros manifests
+
+images:
+  - name: [image-name]
+    newTag: "[version]"
+```
+
+## 🚀 Como Usar
+
+### Deploy de Toda a Infraestrutura
+
 ```bash
-# Deploy ArgoCD with all components
-./deploy-argocd.sh
+# Deploy tudo
+kubectl apply -k k8s/infra/dev/
+
+# Verificar status
+kubectl get all -n smartcity
 ```
 
-### Apply all PVCs
+### Deploy de Componente Específico
+
 ```bash
-# Run the script to apply all PVCs
-./apply-pvcs.sh
+# Deploy apenas MongoDB
+kubectl apply -k k8s/infra/dev/mongo/
 
-# Or manually apply each one
-kubectl apply -f postgres-pvc.yaml
-kubectl apply -f mongodb-pvc.yaml
-kubectl apply -f rabbitmq-pvc.yaml
-kubectl apply -f redis-pvc.yaml
-kubectl apply -f keycloak-pvc.yaml
-kubectl apply -f n8n-pvc.yaml
-kubectl apply -f argocd-pvc.yaml
+# Deploy apenas PostgreSQL
+kubectl apply -k k8s/infra/dev/postgres/
+
+# Deploy apenas Redis
+kubectl apply -k k8s/infra/dev/redis/
 ```
 
-### Apply all infrastructure
+### Deploy com Overlays (Para Diferentes Ambientes)
+
 ```bash
-kubectl apply -k k8s/infra/dev
+# Para staging
+kubectl apply -k k8s/infra/staging/
+
+# Para produção
+kubectl apply -k k8s/infra/prod/
 ```
 
-### ArgoCD Access
-After deployment, access ArgoCD at:
-- **UI**: https://argocd.dev.smartcity.local
-- **GRPC**: argocd-grpc.dev.smartcity.local:443
-- **Username**: admin
-- **Password**: admin123 (default, check deployment output for actual password)
+## ⚙️ Configurações por Ambiente
 
-Add to `/etc/hosts`:
-```
-<MINIKUBE_IP> argocd.dev.smartcity.local argocd-grpc.dev.smartcity.local
+### Desenvolvimento (`dev/`)
+- Recursos mínimos
+- Configurações de debug habilitadas
+- Backups frequentes
+- Acesso administrativo completo
+
+### Staging (`staging/`)
+- Recursos intermediários
+- Configurações otimizadas
+- Backups diários
+- Acesso controlado
+
+### Produção (`prod/`)
+- Recursos máximos
+- Configurações de performance
+- Backups redundantes
+- Segurança máxima
+
+## 🏷️ Labels e Annotations
+
+### Labels Comuns
+
+Todos os recursos recebem automaticamente:
+
+```yaml
+labels:
+  environment: development
+  managed-by: kustomize
+  project: smartcity
+  app: [component-name]
+  component: [component-type]
 ```
 
-### ArgoCD CLI Setup
+### Labels por Componente
+
+Cada componente adiciona labels específicos:
+
+- **MongoDB**: `component: database`, `app: mongodb`
+- **PostgreSQL**: `component: database`, `app: postgres`
+- **Redis**: `component: cache`, `app: redis`
+- **RabbitMQ**: `component: messaging`, `app: rabbitmq`
+
+## 🔄 Estratégia de Deploy
+
+### Ordem de Deploy
+
+1. **Secrets e ConfigMaps** - Primeiro
+2. **PersistentVolumeClaims** - Segundo
+3. **Services** - Terceiro
+4. **Deployments/StatefulSets** - Quarto
+5. **NetworkPolicies** - Quinto
+6. **CronJobs** - Último
+
+### Dependências
+
+- **MongoDB/PostgreSQL**: Não têm dependências
+- **Redis**: Não tem dependências
+- **RabbitMQ**: Não tem dependências
+- **Keycloak**: Pode depender de PostgreSQL
+- **ArgoCD**: Independente
+
+## 📊 Monitoramento
+
+### Health Checks
+
 ```bash
-# Install ArgoCD CLI
-curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-chmod +x /usr/local/bin/argocd
+# Verificar todos os componentes
+kubectl get all -n smartcity
 
-# Login
-argocd login argocd-grpc.dev.smartcity.local --username admin --password admin123 --insecure
+# Verificar por componente
+kubectl get all -n smartcity -l app=mongodb
+kubectl get all -n smartcity -l app=postgres
+kubectl get all -n smartcity -l component=database
 ```
 
-### How to regenerate secrets locally
+### Logs
+
 ```bash
-# Using kubectl create secret:
-kubectl create secret generic postgres-secrets \
-  --from-literal=POSTGRES_USER=postgres \
-  --from-literal=POSTGRES_PASSWORD=postgres -n smartcity
+# Logs por componente
+kubectl logs -n smartcity -l app=redis
+kubectl logs -n smartcity -l app=rabbitmq
 
-# Or apply the provided secret manifests:
-kubectl apply -f postgres-secret.yaml
-kubectl apply -f redis-secret.yaml  
-kubectl apply -f rabbitmq-secret.yaml
-kubectl apply -f keycloak-secret.yaml
+# Logs de backup jobs
+kubectl logs -n smartcity -l component=backup
 ```
 
-## Notes
-- For production, use SealedSecrets / ExternalSecrets / Vault.
-- Adjust resources in manifests if your Minikube has less than 2 CPU / 4Gi memory.
-- PVCs use `standard` storage class (default in Minikube).
+## 🔧 Manutenção
+
+### Atualização de Imagens
+
+Para atualizar versões das imagens:
+
+```yaml
+# Em kustomization.yaml do componente
+images:
+  - name: mongo
+    newTag: "7.0"  # Atualizar versão
+```
+
+### Scaling
+
+```bash
+# Scale Redis
+kubectl scale deployment redis --replicas=2 -n smartcity
+
+# Scale RabbitMQ
+kubectl scale deployment rabbitmq --replicas=3 -n smartcity
+```
+
+### Backup e Restore
+
+Cada componente tem seus próprios scripts de backup:
+
+```bash
+# MongoDB
+cd k8s/infra/dev/mongo/
+./deploy-mongodb.sh
+
+# PostgreSQL
+cd k8s/infra/dev/postgres/
+./deploy-postgres.sh
+
+# Redis
+cd k8s/infra/dev/redis/
+./deploy-redis.sh
+
+# RabbitMQ
+cd k8s/infra/dev/rabbitmq/
+./deploy-rabbitmq.sh
+```
+
+## 🚨 Troubleshooting
+
+### Problemas Comuns
+
+1. **PVC Pending**: Verificar storage class
+2. **Pod CrashLoopBackOff**: Verificar logs e configurações
+3. **Service Unavailable**: Verificar selectors e labels
+4. **Network Issues**: Verificar NetworkPolicies
+
+### Comandos Úteis
+
+```bash
+# Ver todos os recursos
+kubectl get all -n smartcity
+
+# Ver recursos por componente
+kubectl get all -n smartcity -l component=database
+
+# Ver events
+kubectl get events -n smartcity --sort-by=.metadata.creationTimestamp
+
+# Ver resource usage
+kubectl top pods -n smartcity
+```
+
+## 📚 Referências
+
+- [Kustomize Documentation](https://kubectl.docs.kubernetes.io/references/kustomize/)
+- [Kubernetes Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
+- [GitOps with ArgoCD](https://argo-cd.readthedocs.io/)
+
+---
+
+**Nota**: Esta estrutura facilita a manutenção, escalabilidade e organização da infraestrutura do Smart City, seguindo as melhores práticas do Kubernetes e Kustomize.

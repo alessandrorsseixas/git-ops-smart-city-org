@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-config
+  namespace: smartcity
+  labels:
+    app: keycloak
+    app.kubernetes.io/name: keycloak-config
+    app.kubernetes.io/component: config
+    app.kubernetes.io/part-of: smartcity
+data:
+  # Keycloak configuration
+  KC_LOG_LEVEL: "INFO"
+  KC_METRICS_ENABLED: "true"
+  KC_HEALTH_ENABLED: "true"
+  KC_HTTP_ENABLED: "true"
+  KC_HOSTNAME_STRICT: "false"
+  KC_HOSTNAME_STRICT_HTTPS: "false"
+  KC_SPI_THEME_CACHE_THEMES: "false"
+  KC_SPI_THEME_CACHE_TEMPLATES: "false"
+  KC_SPI_THEME_STATIC_MAX_AGE: "-1"
+  # Database configuration
+  KC_DB_POOL_INITIAL_SIZE: "5"
+  KC_DB_POOL_MIN_SIZE: "5"
+  KC_DB_POOL_MAX_SIZE: "20"
+  # Cache configuration
+  KC_CACHE: "ispn"
+  KC_CACHE_STACK: "kubernetes"
+  # Proxy configuration
+  KC_PROXY: "edge"
+  # Features
+  KC_FEATURES: "token-exchange,admin-fine-grained-authz,recovery-codes,scripts,upload-scripts"

@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-backup-config
+  namespace: smartcity
+  labels:
+    app: rabbitmq
+    component: backup
+    environment: development
+data:
+  backup.sh: |
+    #!/bin/bash
+    set -e
+
+    # Configuration
+    BACKUP_DIR="/backup"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_NAME="rabbitmq_backup_${TIMESTAMP}"
+    BACKUP_FILE="${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
+
+    # RabbitMQ connection details
+    RABBITMQ_HOST="${RABBITMQ_HOST:-rabbitmq.smartcity.svc.cluster.local}"
+    RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
+    RABBITMQ_USER="${RABBITMQ_USER:-smartcity}"
+    RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-smartcity123}"
+    RABBITMQ_VHOST="${RABBITMQ_VHOST:-/}"
+
+    echo "Starting RabbitMQ backup: $BACKUP_NAME"
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$BACKUP_DIR"
+
+    # Export definitions (configuration)
+    echo "Exporting RabbitMQ definitions..."
+    curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      "http://$RABBITMQ_HOST:15672/api/definitions" \
+      -o "${BACKUP_DIR}/definitions.json"
+
+    # Export user permissions
+    echo "Exporting user permissions..."
+    curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      "http://$RABBITMQ_HOST:15672/api/permissions" \
+      -o "${BACKUP_DIR}/permissions.json"
+
+    # Create backup archive
+    echo "Creating backup archive..."
+    tar -czf "$BACKUP_FILE" \
+      -C "$BACKUP_DIR" \
+      definitions.json \
+      permissions.json
+
+    echo "Backup completed: $BACKUP_FILE"
+
+    # List existing backups and remove old ones (keep last 7 days)
+    echo "Cleaning up old backups..."
+    find "$BACKUP_DIR" -name "rabbitmq_backup_*.tar.gz" -mtime +7 -delete
+
+    echo "Backup process completed successfully"
+
+  restore.sh: |
+    #!/bin/bash
+    set -e
+
+    # Configuration
+    BACKUP_DIR="/backup"
+    BACKUP_FILE="$1"
+
+    if [ -z "$BACKUP_FILE" ]; then
+      echo "Usage: $0 <backup_file>"
+      echo "Available backups:"
+      ls -la "$BACKUP_DIR"/rabbitmq_backup_*.tar.gz
+      exit 1
+    fi
+
+    # RabbitMQ connection details
+    RABBITMQ_HOST="${RABBITMQ_HOST:-rabbitmq.smartcity.svc.cluster.local}"
+    RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
+    RABBITMQ_USER="${RABBITMQ_USER:-smartcity}"
+    RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-smartcity123}"
+
+    echo "Starting RabbitMQ restore from: $BACKUP_FILE"
+
+    # Extract backup
+    TEMP_DIR=$(mktemp -d)
+    tar -xzf "$BACKUP_FILE" -C "$TEMP_DIR"
+
+    # Import definitions
+    echo "Importing RabbitMQ definitions..."
+    curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -d @"$TEMP_DIR/definitions.json" \
+      "http://$RABBITMQ_HOST:15672/api/definitions"
+
+    # Wait for definitions to be applied
+    sleep 5
+
+    # Import permissions
+    echo "Importing user permissions..."
+    curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -d @"$TEMP_DIR/permissions.json" \
+      "http://$RABBITMQ_HOST:15672/api/permissions"
+
+    # Cleanup
+    rm -rf "$TEMP_DIR"
+
+    echo "Restore completed successfully from: $BACKUP_FILE"
+
+  health-check.sh: |
+    #!/bin/bash
+
+    # RabbitMQ connection details
+    RABBITMQ_HOST="${RABBITMQ_HOST:-rabbitmq.smartcity.svc.cluster.local}"
+    RABBITMQ_USER="${RABBITMQ_USER:-smartcity}"
+    RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-smartcity123}"
+
+    # Check RabbitMQ health
+    echo "Checking RabbitMQ health..."
+
+    # Check if management API is accessible
+    if curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      "http://$RABBITMQ_HOST:15672/api/overview" >/dev/null 2>&1; then
+      echo "✅ RabbitMQ Management API is accessible"
+    else
+      echo "❌ RabbitMQ Management API is not accessible"
+      exit 1
+    fi
+
+    # Check cluster status
+    CLUSTER_STATUS=$(curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      "http://$RABBITMQ_HOST:15672/api/nodes" | jq -r '.[0].running // false')
+
+    if [ "$CLUSTER_STATUS" = "true" ]; then
+      echo "✅ RabbitMQ node is running"
+    else
+      echo "❌ RabbitMQ node is not running"
+      exit 1
+    fi
+
+    # Check queue health
+    QUEUE_COUNT=$(curl -s -u "$RABBITMQ_USER:$RABBITMQ_PASSWORD" \
+      "http://$RABBITMQ_HOST:15672/api/queues" | jq length)
+
+    echo "📊 Found $QUEUE_COUNT queues"
+
+    echo "✅ RabbitMQ health check completed successfully"

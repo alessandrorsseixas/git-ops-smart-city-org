@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rabbitmq-backup
+  namespace: smartcity
+  labels:
+    app: rabbitmq
+    component: backup
+    environment: development
+spec:
+  schedule: "0 3 * * *"  # Daily at 3:00 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: rabbitmq
+            component: backup
+            environment: development
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: rabbitmq-backup
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - /scripts/backup.sh
+              env:
+                - name: RABBITMQ_HOST
+                  value: "rabbitmq.smartcity.svc.cluster.local"
+                - name: RABBITMQ_PORT
+                  value: "5672"
+                - name: RABBITMQ_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: rabbitmq-secret
+                      key: rabbitmq-username
+                - name: RABBITMQ_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rabbitmq-secret
+                      key: rabbitmq-password
+              volumeMounts:
+                - name: backup-scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+          volumes:
+            - name: backup-scripts
+              configMap:
+                name: rabbitmq-backup-config
+                defaultMode: 0755
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: rabbitmq-backup-pvc
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000

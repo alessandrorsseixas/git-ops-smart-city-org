@@ -1,0 +1,206 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-config
+  namespace: smartcity
+  labels:
+    app: mongodb
+    component: database
+    environment: development
+data:
+  mongodb.conf: |
+    # MongoDB Configuration File
+    # This file contains advanced MongoDB configuration options
+    # Used by the MongoDB StatefulSet for custom settings
+    
+    # Network Configuration
+    net:
+      port: 27017
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 100
+    
+    # Storage Configuration
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+        commitIntervalMs: 100
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 0.5
+          journalCompressor: snappy
+          directoryForIndexes: false
+        collectionConfig:
+          blockCompressor: snappy
+        indexConfig:
+          prefixCompression: true
+    
+    # Security Configuration
+    security:
+      authorization: enabled
+      javascriptEnabled: false
+      redactClientLogData: true
+    
+    # Replication Configuration (for future scaling)
+    replication:
+      replSetName: "rs0"
+    
+    # Logging Configuration
+    systemLog:
+      destination: file
+      logAppend: true
+      path: /data/db/mongod.log
+      verbosity: 0
+      component:
+        accessControl:
+          verbosity: 0
+        command:
+          verbosity: 0
+        control:
+          verbosity: 0
+        ftdc:
+          verbosity: 0
+        geo:
+          verbosity: 0
+        index:
+          verbosity: 0
+        network:
+          verbosity: 0
+        query:
+          verbosity: 0
+        replication:
+          verbosity: 0
+        sharding:
+          verbosity: 0
+        storage:
+          verbosity: 0
+        write:
+          verbosity: 0
+    
+    # Process Management
+    processManagement:
+      fork: false
+      pidFilePath: /data/db/mongod.pid
+    
+    # Cloud Configuration (disabled for on-prem)
+    cloud:
+      monitoring:
+        free:
+          state: off
+        cloud:
+          state: off
+    
+    # Performance Configuration
+    setParameter:
+      wiredTigerMaxCacheOverflowSizeGB: 0.1
+      wiredTigerCacheSizeCheckDelaySecs: 5
+      wiredTigerEngineRuntimeConfigMaxCacheOverflowSizeGB: 0.1
+  init-mongo.js: |
+    // Initialize MongoDB with users and database
+    try {
+      // Switch to admin database
+      db = db.getSiblingDB('admin');
+      
+      // Check if users already exist
+      var users = db.getUsers();
+      var userExists = false;
+      
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].user === 'smartcity') {
+          userExists = true;
+          break;
+        }
+      }
+      
+      if (!userExists) {
+        // Create application database
+        db = db.getSiblingDB('smartcity');
+        
+        // Create application user
+        db.createUser({
+          user: 'smartcity',
+          pwd: 'smartcity123',
+          roles: [
+            {
+              role: 'readWrite',
+              db: 'smartcity'
+            },
+            {
+              role: 'dbAdmin',
+              db: 'smartcity'
+            }
+          ]
+        });
+        
+        print('Application user created successfully');
+        
+        // Switch back to admin database
+        db = db.getSiblingDB('admin');
+        
+        // Create admin user if it doesn't exist
+        var adminUsers = db.getUsers();
+        var adminExists = false;
+        
+        for (var i = 0; i < adminUsers.length; i++) {
+          if (adminUsers[i].user === 'admin') {
+            adminExists = true;
+            break;
+          }
+        }
+        
+        if (!adminExists) {
+          db.createUser({
+            user: 'admin',
+            pwd: 'admin123',
+            roles: [
+              {
+                role: 'userAdminAnyDatabase',
+                db: 'admin'
+              },
+              {
+                role: 'readWriteAnyDatabase',
+                db: 'admin'
+              },
+              {
+                role: 'dbAdminAnyDatabase',
+                db: 'admin'
+              },
+              {
+                role: 'clusterAdmin',
+                db: 'admin'
+              }
+            ]
+          });
+          
+          print('Admin user created successfully');
+        } else {
+          print('Admin user already exists');
+        }
+        
+        // Initialize replica set
+        try {
+          rs.initiate({
+            _id: 'rs0',
+            members: [
+              {
+                _id: 0,
+                host: 'mongodb-0.mongodb.smartcity.svc.cluster.local:27017'
+              }
+            ]
+          });
+          print('Replica set initialized successfully');
+        } catch (rsError) {
+          if (rsError.code !== 23) { // Already initialized
+            print('Error initializing replica set: ' + rsError);
+          } else {
+            print('Replica set already initialized');
+          }
+        }
+        
+      } else {
+        print('Users already exist, skipping initialization');
+      }
+      
+    } catch (error) {
+      print('Error during initialization: ' + error);
+    }

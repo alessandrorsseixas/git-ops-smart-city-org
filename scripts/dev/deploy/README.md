@@ -6,10 +6,12 @@ This directory contains deployment scripts for the Smart City GitOps platform de
 
 | Script | Description | Purpose |
 |--------|-------------|---------|
-| `deploy-all.sh` | 🚀 Complete deployment | Deploys everything in order: PVCs → Infrastructure → ArgoCD |
+| `deploy-all.sh` | 🚀 Complete deployment | Deploys everything in order: Infrastructure → ArgoCD |
 | `deploy-pvcs.sh` | 💾 PVC deployment | Creates all Persistent Volume Claims |
 | `deploy-infra.sh` | 🏗️ Infrastructure deployment | Deploys PostgreSQL, Redis, RabbitMQ, Keycloak |
 | `deploy-argocd.sh` | 🎯 ArgoCD deployment | Deploys ArgoCD GitOps platform |
+| `deploy-component.sh` | 🔧 Component deployment | Deploy individual components using Kustomize |
+| `kustomize-examples.sh` | 📚 Kustomize examples | Shows useful Kustomize commands and examples |
 | `status.sh` | 📊 Status monitoring | Shows comprehensive status of all deployments |
 | `cleanup.sh` | 🧹 Complete cleanup | Removes all resources and data |
 
@@ -31,6 +33,17 @@ This directory contains deployment scripts for the Smart City GitOps platform de
 
 # 3. Deploy ArgoCD
 ./deploy-argocd.sh
+```
+
+### Individual Component Deployment
+```bash
+# Deploy specific components
+./deploy-component.sh postgres
+./deploy-component.sh redis
+./deploy-component.sh argocd
+
+# Deploy all components
+./deploy-component.sh all
 ```
 
 ### Monitor Status
@@ -70,19 +83,58 @@ minikube status
 
 ## 🏗️ Deployment Architecture
 
+The deployment uses **Kustomize** for configuration management, providing:
+
+- **Hierarchical organization** - Components organized in separate directories
+- **Environment-specific overlays** - Easy switching between dev/staging/prod
+- **DRY principles** - Common configurations shared across components
+- **Version control** - All configurations tracked in Git
+- **Modular deployments** - Deploy individual components or entire stacks
+
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   ArgoCD        │    │  Infrastructure │
-│   Namespace     │    │   Namespace     │
-├─────────────────┤    ├─────────────────┤
-│ • Server        │    │ • PostgreSQL    │
-│ • Repo Server   │    │ • Redis         │
-│ • Controller    │    │ • RabbitMQ      │ 
-│ • DEX Server    │    │ • Keycloak      │
-│ • Redis         │    │ • MongoDB       │
-│ • Notifications │    │ • N8N           │
-└─────────────────┘    └─────────────────┘
+k8s/infra/dev/
+├── kustomization.yaml          # Main configuration
+├── postgres/                   # PostgreSQL component
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── mongo/                      # MongoDB component
+│   ├── kustomization.yaml
+│   └── [manifests...]
+├── redis/                      # Redis component
+├── rabbitmq/                   # RabbitMQ component
+├── keycloack/                  # Keycloak component
+└── argocd/                     # ArgoCD component
 ```
+
+### Kustomize Features Used
+
+- **Common Labels** - Applied to all resources for better organization
+- **Image Transformations** - Environment-specific image versions
+- **ConfigMap Generators** - Environment-specific configurations
+- **Resource Patches** - Fine-tuning for different environments
+- **Namespace Management** - Automatic namespace assignment
+
+## 🔧 Individual Component Deployment
+
+The `deploy-component.sh` script allows flexible component management:
+
+```bash
+# Available components
+./deploy-component.sh postgres    # PostgreSQL database
+./deploy-component.sh mongo       # MongoDB database
+./deploy-component.sh redis       # Redis cache
+./deploy-component.sh rabbitmq    # RabbitMQ message broker
+./deploy-component.sh keycloak    # Keycloak identity provider
+./deploy-component.sh argocd      # ArgoCD GitOps platform
+./deploy-component.sh all         # All infrastructure components
+```
+
+### Benefits of Individual Deployment
+
+- **Faster development cycles** - Deploy only what you're working on
+- **Resource efficiency** - Don't deploy unnecessary components
+- **Easier debugging** - Isolate issues to specific components
+- **Parallel development** - Team members can work on different components
 
 ## 📦 Components Deployed
 
@@ -214,14 +266,47 @@ kubectl describe pod <pod-name> -n <namespace>
 
 ## 🔄 Deployment Order
 
-The scripts automatically handle the correct deployment order:
+The scripts automatically handle the correct deployment order using Kustomize:
 
-1. **Namespaces** - Create required namespaces
-2. **PVCs** - Create storage claims first
-3. **Secrets & ConfigMaps** - Configuration data
-4. **StatefulSets & Deployments** - Applications
-5. **Services** - Internal networking
-6. **Ingresses** - External access
+1. **Kustomize Processing** - Apply transformations and patches
+2. **Namespaces** - Create required namespaces
+3. **PVCs** - Create storage claims first
+4. **Secrets & ConfigMaps** - Configuration data
+5. **StatefulSets & Deployments** - Applications
+6. **Services** - Internal networking
+7. **Ingresses** - External access
+8. **NetworkPolicies** - Security policies
+
+### Kustomize Command Examples
+
+```bash
+# Deploy entire infrastructure
+kubectl apply -k k8s/infra/dev/
+
+# Deploy individual components
+kubectl apply -k k8s/infra/dev/postgres/
+kubectl apply -k k8s/infra/dev/redis/
+
+# Preview what will be deployed
+kubectl kustomize k8s/infra/dev/
+
+# Dry-run deployment
+kubectl apply -k k8s/infra/dev/ --dry-run=client
+```
+
+### View Kustomize Examples
+
+For a comprehensive list of Kustomize commands:
+
+```bash
+./kustomize-examples.sh
+```
+
+This script shows practical examples for:
+- Previewing deployments
+- Individual component deployment
+- Resource management
+- Troubleshooting commands
 
 ## 📝 Next Steps After Deployment
 

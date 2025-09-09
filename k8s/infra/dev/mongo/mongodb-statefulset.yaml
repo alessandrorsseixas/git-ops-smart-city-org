@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: smartcity
+  labels:
+    app: mongodb
+    component: database
+    environment: development
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+      component: database
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        component: database
+        environment: development
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6.0
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-root-username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-root-password
+        - name: MONGO_INITDB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-database
+        - name: MONGO_INITDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-username
+        - name: MONGO_INITDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-password
+        - name: MONGO_REPLICA_SET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-replica-set-name
+        - name: MONGODB_EXTRA_FLAGS
+          value: "--config /etc/mongo/mongodb.conf --bind_ip_all --auth"
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        - name: mongodb-config
+          mountPath: /etc/mongo/mongodb.conf
+          subPath: mongodb.conf
+        - name: mongodb-init
+          mountPath: /docker-entrypoint-initdb.d/init-mongo.js
+          subPath: init-mongo.js
+        - name: mongodb-logs
+          mountPath: /var/log/mongodb
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.adminCommand('ping')"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.adminCommand('ping')"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: mongodb-config
+        configMap:
+          name: mongodb-config
+      - name: mongodb-init
+        configMap:
+          name: mongodb-config
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-data
+      labels:
+        app: mongodb
+        component: database
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 3Gi
+      storageClassName: standard
+  - metadata:
+      name: mongodb-logs
+      labels:
+        app: mongodb
+        component: logs
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: standard

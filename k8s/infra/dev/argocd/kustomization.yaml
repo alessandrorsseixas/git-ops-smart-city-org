@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: argocd
+  namespace: argocd
+
+commonLabels:
+  app.kubernetes.io/name: argocd
+  app.kubernetes.io/part-of: argocd
+  environment: development
+  managed-by: kustomize
+
+resources:
+  - argocd-namespace.yaml
+  - argocd-secret.yaml
+  - argocd-configmap.yaml
+  - argocd-additional-configmaps.yaml
+  - argocd-serviceaccount.yaml
+  - argocd-rbac.yaml
+  - argocd-pvc.yaml
+  - argocd-service.yaml
+  - argocd-deployment.yaml
+  - argocd-ingress.yaml
+
+images:
+  - name: argoproj/argocd
+    newTag: "v2.8.4"
+  - name: redis
+    newTag: "7.0-alpine"

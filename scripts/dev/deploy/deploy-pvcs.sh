@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Deploy PVCs for Smart City GitOps - Development Environment
-# This script creates all Persistent Volume Claims needed for the infrastructure
+# This script creates all Persistent Volume Claims using Kustomize
 
 set -e
 
@@ -10,6 +10,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
 INFRA_DIR="$PROJECT_ROOT/k8s/infra/dev"
 
 echo "💾 Starting PVC deployment for Smart City GitOps - DEV environment..."
+echo "📁 Using Kustomize structure from: $INFRA_DIR"
 
 # Check if kubectl is available
 if ! command -v kubectl &> /dev/null; then
@@ -27,38 +28,9 @@ fi
 
 echo "✅ Connected to Kubernetes cluster"
 
-# Create namespace if it doesn't exist
-echo "📦 Creating/Checking smartcity namespace..."
-kubectl create namespace smartcity --dry-run=client -o yaml | kubectl apply -f -
-
-# Create namespace for ArgoCD if it doesn't exist
-echo "📦 Creating/Checking argocd namespace..."
-kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-
-echo "💾 Creating Persistent Volume Claims..."
-
-# Infrastructure PVCs
-echo "   - PostgreSQL PVC (5Gi)..."
-kubectl apply -f "$INFRA_DIR/postgres-pvc.yaml"
-
-echo "   - MongoDB PVC (3Gi)..."
-kubectl apply -f "$INFRA_DIR/mongodb-pvc.yaml"
-
-echo "   - Redis PVC (1Gi)..."
-kubectl apply -f "$INFRA_DIR/redis-pvc.yaml"
-
-echo "   - RabbitMQ PVC (2Gi)..."
-kubectl apply -f "$INFRA_DIR/rabbitmq-pvc.yaml"
-
-echo "   - Keycloak PVC (1Gi)..."
-kubectl apply -f "$INFRA_DIR/keycloak-pvc.yaml"
-
-echo "   - N8N PVC (2Gi)..."
-kubectl apply -f "$INFRA_DIR/n8n-pvc.yaml"
-
-# ArgoCD PVCs
-echo "   - ArgoCD PVCs (10Gi + 5Gi)..."
-kubectl apply -f "$INFRA_DIR/argocd-pvc.yaml"
+# Deploy PVCs using Kustomize (this will deploy all PVCs defined in the kustomization.yaml)
+echo "💾 Creating Persistent Volume Claims using Kustomize..."
+kubectl apply -k "$INFRA_DIR"
 
 # Wait for PVCs to be created
 echo "⏳ Waiting for PVCs to be bound..."

@@ -1,14 +1,16 @@
 #!/bin/bash
 
 # Deploy ArgoCD for Smart City GitOps - Development Environment
-# This script deploys ArgoCD with all necessary components
+# This script deploys ArgoCD using Kustomize
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST_DIR="$SCRIPT_DIR/../../../k8s/infra/dev"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
+INFRA_DIR="$PROJECT_ROOT/k8s/infra/dev"
 
 echo "🚀 Starting ArgoCD deployment for Smart City GitOps - DEV environment..."
+echo "📁 Using Kustomize structure from: $INFRA_DIR/argocd"
 
 # Check if kubectl is available
 if ! command -v kubectl &> /dev/null; then
@@ -26,35 +28,9 @@ fi
 
 echo "✅ Connected to Kubernetes cluster"
 
-# Create ArgoCD namespace first
-echo "📦 Creating ArgoCD namespace..."
-kubectl apply -f "$MANIFEST_DIR/argocd-namespace.yaml"
-
-# Wait for namespace to be ready
-echo "⏳ Waiting for namespace to be ready..."
-kubectl wait --for=condition=Ready --timeout=30s namespace/argocd || true
-
-# Apply ArgoCD manifests in order
-echo "🔧 Applying ArgoCD ConfigMaps and Secrets..."
-kubectl apply -f "$MANIFEST_DIR/argocd-configmap.yaml"
-kubectl apply -f "$MANIFEST_DIR/argocd-additional-configmaps.yaml"
-kubectl apply -f "$MANIFEST_DIR/argocd-secret.yaml"
-
-echo "🔐 Creating Service Accounts and RBAC..."
-kubectl apply -f "$MANIFEST_DIR/argocd-serviceaccount.yaml"
-kubectl apply -f "$MANIFEST_DIR/argocd-rbac.yaml"
-
-echo "💾 Creating Persistent Volume Claims..."
-kubectl apply -f "$MANIFEST_DIR/argocd-pvc.yaml"
-
-echo "🏗️  Deploying ArgoCD components..."
-kubectl apply -f "$MANIFEST_DIR/argocd-deployment.yaml"
-
-echo "🌐 Creating Services..."
-kubectl apply -f "$MANIFEST_DIR/argocd-service.yaml"
-
-echo "🔗 Creating Ingress..."
-kubectl apply -f "$MANIFEST_DIR/argocd-ingress.yaml"
+# Deploy ArgoCD using Kustomize
+echo "🏗️ Deploying ArgoCD using Kustomize..."
+kubectl apply -k "$INFRA_DIR/argocd"
 
 # Wait for ArgoCD server to be ready
 echo "⏳ Waiting for ArgoCD server to be ready..."

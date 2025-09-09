@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: smartcity
+  labels:
+    app: postgres
+    component: database
+    environment: development
+data:
+  init-smartcity-db.sh: |
+    #!/bin/bash
+    set -e
+
+    # Wait for PostgreSQL to be ready
+    until pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
+      echo "PostgreSQL is unavailable - sleeping"
+      sleep 2
+    done
+
+    echo "PostgreSQL is up - executing initialization"
+
+    # Create application user if it doesn't exist
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      -- Create application user
+      DO \$\$
+      BEGIN
+         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'smartcity_app') THEN
+            CREATE USER smartcity_app WITH PASSWORD 'app123';
+         END IF;
+      END
+      \$\$;
+
+      -- Grant permissions to application user
+      GRANT CONNECT ON DATABASE smartcity TO smartcity_app;
+      GRANT USAGE ON SCHEMA public TO smartcity_app;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO smartcity_app;
+      GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO smartcity_app;
+
+      -- Create extensions
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+      CREATE EXTENSION IF NOT EXISTS "pg_buffercache";
+
+      -- Create default tables if they don't exist
+      CREATE TABLE IF NOT EXISTS health_check (
+        id SERIAL PRIMARY KEY,
+        service_name VARCHAR(100) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'healthy',
+        checked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        details JSONB
+      );
+
+      -- Insert initial health check
+      INSERT INTO health_check (service_name, status, details)
+      VALUES ('postgres', 'healthy', '{"version": "15", "database": "smartcity"}')
+      ON CONFLICT DO NOTHING;
+    EOSQL
+
+    echo "PostgreSQL initialization completed successfully"
+
+  create-backup-user.sql: |
+    -- Create backup user with minimal privileges
+    DO \$\$
+    BEGIN
+       IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'backup_user') THEN
+          CREATE USER backup_user WITH PASSWORD 'backup123';
+       END IF;
+    END
+    \$\$;
+
+    -- Grant necessary permissions for backup
+    GRANT CONNECT ON DATABASE smartcity TO backup_user;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO backup_user;
+    GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO backup_user;
+
+    -- Grant pg_read_all_data for logical backups
+    GRANT pg_read_all_data TO backup_user;

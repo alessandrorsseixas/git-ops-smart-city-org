@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-backup-config
+  namespace: smartcity
+  labels:
+    app: mongodb
+    component: backup
+    environment: development
+data:
+  backup.sh: |
+    #!/bin/bash
+    set -e
+    
+    BACKUP_DIR="/backup"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_NAME="mongodb_backup_${TIMESTAMP}"
+    
+    echo "Starting MongoDB backup: ${BACKUP_NAME}"
+    
+    # Create backup directory
+    mkdir -p "${BACKUP_DIR}/${BACKUP_NAME}"
+    
+    # Perform backup
+    mongodump \
+      --host localhost \
+      --port 27017 \
+      --username smartcity \
+      --password smartcity123 \
+      --authenticationDatabase admin \
+      --db smartcity \
+      --out "${BACKUP_DIR}/${BACKUP_NAME}"
+    
+    # Compress backup
+    cd "${BACKUP_DIR}"
+    tar -czf "${BACKUP_NAME}.tar.gz" "${BACKUP_NAME}"
+    rm -rf "${BACKUP_NAME}"
+    
+    echo "Backup completed: ${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
+    
+    # Clean old backups (keep last 7 days)
+    find "${BACKUP_DIR}" -name "mongodb_backup_*.tar.gz" -mtime +7 -delete
+    
+    echo "Old backups cleaned up"

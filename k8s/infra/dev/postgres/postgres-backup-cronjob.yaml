@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: smartcity
+  labels:
+    app: postgres
+    component: backup
+    environment: development
+spec:
+  schedule: "0 2 * * *"  # Daily at 2:00 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres
+            component: backup
+            environment: development
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: postgres-backup
+              image: postgres:15-alpine
+              command:
+                - /bin/bash
+                - -c
+                - /scripts/backup.sh
+              env:
+                - name: POSTGRES_HOST
+                  value: "postgres.smartcity.svc.cluster.local"
+                - name: POSTGRES_PORT
+                  value: "5432"
+                - name: POSTGRES_DB
+                  value: "smartcity"
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-username
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-password
+              volumeMounts:
+                - name: backup-scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+          volumes:
+            - name: backup-scripts
+              configMap:
+                name: postgres-backup-config
+                defaultMode: 0755
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999

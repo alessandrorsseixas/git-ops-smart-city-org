@@ -1,0 +1,177 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: smartcity
+  labels:
+    app: rabbitmq
+    component: messaging
+    environment: development
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus,rabbitmq_peer_discovery_k8s].
+  rabbitmq.conf: |
+    # RabbitMQ configuration for Smart City application
+
+    # Network Configuration
+    listeners.tcp.default = 5672
+    management.tcp.port = 15672
+    prometheus.tcp.port = 15692
+
+    # Memory and Performance
+    vm_memory_high_watermark.relative = 0.8
+    vm_memory_high_watermark_paging_ratio = 0.75
+    disk_free_limit.relative = 2.0
+
+    # Queue Configuration
+    default_max_message_size = 134217728
+    channel_max = 2047
+    max_message_size = 134217728
+
+    # Clustering (prepared for future scaling)
+    cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
+    cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+    cluster_formation.k8s.address_type = hostname
+    cluster_formation.node_cleanup.interval = 30
+    cluster_formation.node_cleanup.only_log_warning = true
+
+    # Logging Configuration
+    log.default.level = info
+    log.console.level = info
+    log.console.output = stdout
+    log.file.level = info
+    log.file.rotation.date = $D0
+    log.file.rotation.count = 20
+
+    # Security Configuration
+    ssl_options.verify = verify_peer
+    ssl_options.fail_if_no_peer_cert = false
+
+    # Heartbeat Configuration
+    heartbeat = 60
+
+    # Consumer Configuration
+    consumer_timeout = 21600000
+
+    # Mnesia Configuration
+    mnesia_table_loading_retry_timeout = 30000
+    mnesia_table_loading_retry_limit = 10
+
+  definitions.json: |
+    {
+      "rabbit_version": "3.11",
+      "users": [
+        {
+          "name": "smartcity",
+          "password_hash": "",
+          "hashing_algorithm": "rabbit_password_hashing_sha256",
+          "tags": "administrator"
+        },
+        {
+          "name": "admin",
+          "password_hash": "",
+          "hashing_algorithm": "rabbit_password_hashing_sha256",
+          "tags": "administrator"
+        }
+      ],
+      "vhosts": [
+        {
+          "name": "/"
+        },
+        {
+          "name": "smartcity"
+        }
+      ],
+      "permissions": [
+        {
+          "user": "smartcity",
+          "vhost": "/",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        },
+        {
+          "user": "smartcity",
+          "vhost": "smartcity",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        },
+        {
+          "user": "admin",
+          "vhost": "/",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        }
+      ],
+      "policies": [
+        {
+          "name": "ha-all",
+          "pattern": ".*",
+          "vhost": "/",
+          "definition": {
+            "ha-mode": "all",
+            "ha-sync-mode": "automatic"
+          }
+        }
+      ],
+      "queues": [
+        {
+          "name": "smartcity.notifications",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-max-retries": 3,
+            "x-message-ttl": 86400000
+          }
+        },
+        {
+          "name": "smartcity.events",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-max-retries": 5,
+            "x-message-ttl": 604800000
+          }
+        }
+      ],
+      "exchanges": [
+        {
+          "name": "smartcity.topic",
+          "vhost": "/",
+          "type": "topic",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        },
+        {
+          "name": "smartcity.direct",
+          "vhost": "/",
+          "type": "direct",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        }
+      ],
+      "bindings": [
+        {
+          "source": "smartcity.topic",
+          "vhost": "/",
+          "destination": "smartcity.notifications",
+          "destination_type": "queue",
+          "routing_key": "notification.#",
+          "arguments": {}
+        },
+        {
+          "source": "smartcity.topic",
+          "vhost": "/",
+          "destination": "smartcity.events",
+          "destination_type": "queue",
+          "routing_key": "event.#",
+          "arguments": {}
+        }
+      ]
+    }

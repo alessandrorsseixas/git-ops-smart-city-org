@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: keycloak
+  namespace: smartcity
+
+resources:
+  - keycloak-pvc.yaml
+  - keycloak-secret.yaml
+  - keycloak-configmap.yaml
+  - keycloak-deployment.yaml
+  - keycloak-service.yml
+  - keycloak-tls-secret.yaml
+  - keycloak-ingress.yaml
+  - keycloak-networkpolicy.yaml
+
+commonLabels:
+  app: keycloak
+  app.kubernetes.io/name: keycloak
+  app.kubernetes.io/part-of: smartcity
+  environment: development
+  managed-by: kustomize
+
+images:
+  - name: quay.io/keycloak/keycloak
+    newTag: "22.0.5"
+
+patchesStrategicMerge:
+  - keycloak-deployment-patch.yaml
