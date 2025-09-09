@@ -28,6 +28,8 @@ spec:
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "dev"
+        - name: SPRING_CONFIG_LOCATION
+          value: "/app/config/application.yml"
         envFrom:
         - configMapRef:
             name: house-control-config
@@ -36,6 +38,7 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /app/config
+          readOnly: true
         resources:
           requests:
             memory: "256Mi"

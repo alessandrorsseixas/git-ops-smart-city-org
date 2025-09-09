@@ -1,0 +1,87 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: smartcity-infrastructure
+  namespace: smartcity
+
+# Common labels applied to all resources
+commonLabels:
+  environment: development
+  managed-by: kustomize
+  project: smartcity
+
+# Resources organized by component
+resources:
+  # Database components
+  - postgres/
+  - mongo/
+  - redis/
+
+  # Messaging components
+  - rabbitmq/
+
+  # Identity and Access Management
+  - keycloack/
+
+  # GitOps and CI/CD
+  - argocd/
+
+  # Application components
+  - ../../../gitops/dev/house-control/
+
+  # Additional PVCs
+  - n8n-pvc.yaml
+
+# Namespace configuration
+namespace: smartcity
+
+# Image transformations for different environments
+images:
+  # Database images
+  - name: mongo
+    newTag: "6.0"
+  - name: postgres
+    newTag: "15-alpine"
+  - name: redis
+    newTag: "7.2-alpine"
+
+  # Messaging images
+  - name: rabbitmq
+    newTag: "3.11-management-alpine"
+
+  # ArgoCD images
+  - name: argoproj/argocd
+    newTag: "v2.8.4"
+
+# ConfigMap generator for environment-specific configurations
+configMapGenerator:
+  - name: smartcity-config
+    literals:
+      - ENVIRONMENT=development
+      - NAMESPACE=smartcity
+      - CLUSTER_DOMAIN=cluster.local
+
+# Secret generator (disabled for production - use explicit secrets)
+# secretGenerator:
+#   - name: smartcity-secrets
+#     literals:
+#       - database-url=postgresql://smartcity:smartcity123@postgres.smartcity.svc.cluster.local:5432/smartcity
+#     type: Opaque
+
+# Resource patches for different environments
+patchesStrategicMerge: []
+
+# JSON 6902 patches for complex modifications
+patches: []
+
+# Replicas configuration for different environments
+replicas:
+  - name: redis
+    count: 1
+  - name: postgres
+    count: 1
+  - name: rabbitmq
+    count: 1
+  - name: house-control-container
+    count: 1

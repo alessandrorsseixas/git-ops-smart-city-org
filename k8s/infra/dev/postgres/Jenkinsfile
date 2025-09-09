@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/alessandrorsseixas/smart-city-org.git'
+            }
+        }
+
+        stage('Deploy PostgreSQL') {
+            steps {
+                sh '''
+                    cd k8s/infra/dev/postgres
+                    chmod +x deploy-postgres.sh
+                    ./deploy-postgres.sh
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    cd k8s/infra/dev/postgres
+                    ./health-check-postgres.sh
+                '''
+            }
+        }
+
+        stage('Test Connection') {
+            steps {
+                sh '''
+                    cd k8s/infra/dev/postgres
+                    ./test-external-connection.sh
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'PostgreSQL deployed successfully!'
+        }
+        failure {
+            echo 'PostgreSQL deployment failed!'
+        }
+    }
+}

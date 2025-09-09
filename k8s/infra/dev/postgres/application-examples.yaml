@@ -1,0 +1,52 @@
+# Exemplo de configuração para aplicações que usam PostgreSQL externo
+
+# Para aplicações Spring Boot
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres.dev.smartcity.local:5432/smartcity
+    username: smartcity
+    password: smartcity123
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+# Para aplicações Node.js com TypeORM
+database:
+  type: postgres
+  host: postgres.dev.smartcity.local
+  port: 5432
+  username: smartcity
+  password: smartcity123
+  database: smartcity
+  synchronize: false
+  logging: false
+
+# Para aplicações Python com SQLAlchemy
+SQLALCHEMY_DATABASE_URI: postgresql://smartcity:smartcity123@postgres.dev.smartcity.local:5432/smartcity
+SQLALCHEMY_TRACK_MODIFICATIONS: false
+
+# Para aplicações .NET
+ConnectionStrings:
+  DefaultConnection: Host=postgres.dev.smartcity.local;Port=5432;Database=smartcity;Username=smartcity;Password=smartcity123;SSL Mode=Require;Trust Server Certificate=true
+
+# Para ferramentas de desenvolvimento
+development:
+  database:
+    host: postgres.dev.smartcity.local
+    port: 5432
+    database: smartcity
+    username: smartcity
+    password: smartcity123
