@@ -3,7 +3,7 @@ kind: Kustomization
 
 metadata:
   name: house-control
-  namespace: smartcity
+  namespace: smart
 
 resources:
   - house-control-config-map.yaml

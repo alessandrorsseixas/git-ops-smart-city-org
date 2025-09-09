@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: house-control-config
-  namespace: smartcity
+  namespace: smart
   labels:
     app: house-control-container
     component: application
