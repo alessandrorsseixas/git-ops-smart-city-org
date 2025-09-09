@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: house-control-container
-        image: ghcr.io/alessandrorsseixas/smart-city-org/house-control:tag-do-commit
+        image: ghcr.io/alessandrorsseixas/smart-city-org/house-control:latest
         ports:
         - containerPort: 8080
           name: http
