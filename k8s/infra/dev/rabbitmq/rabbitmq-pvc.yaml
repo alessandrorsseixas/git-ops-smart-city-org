@@ -11,8 +11,8 @@ metadata:
     description: "Persistent storage for RabbitMQ data in Smart City application"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
+      storage: 1Gi
   storageClassName: standard

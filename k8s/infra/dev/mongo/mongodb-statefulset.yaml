@@ -66,9 +66,9 @@ spec:
         - name: mongodb-config
           mountPath: /etc/mongo/mongodb.conf
           subPath: mongodb.conf
-        - name: mongodb-init
-          mountPath: /docker-entrypoint-initdb.d/init-mongo.js
-          subPath: init-mongo.js
+        # - name: mongodb-init
+        #   mountPath: /docker-entrypoint-initdb.d/init-mongo.js
+        #   subPath: init-mongo.js
         - name: mongodb-logs
           mountPath: /var/log/mongodb
         resources:
@@ -79,21 +79,15 @@ spec:
             memory: "1Gi"
             cpu: "500m"
         livenessProbe:
-          exec:
-            command:
-            - mongo
-            - --eval
-            - "db.adminCommand('ping')"
+          tcpSocket:
+            port: 27017
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
-          exec:
-            command:
-            - mongo
-            - --eval
-            - "db.adminCommand('ping')"
+          tcpSocket:
+            port: 27017
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 5

@@ -42,8 +42,8 @@ data:
       redactClientLogData: true
     
     # Replication Configuration (for future scaling)
-    replication:
-      replSetName: "rs0"
+    # replication:
+    #   replSetName: "rs0"
     
     # Logging Configuration
     systemLog:
@@ -178,24 +178,24 @@ data:
         }
         
         // Initialize replica set
-        try {
-          rs.initiate({
-            _id: 'rs0',
-            members: [
-              {
-                _id: 0,
-                host: 'mongodb-0.mongodb.smartcity.svc.cluster.local:27017'
-              }
-            ]
-          });
-          print('Replica set initialized successfully');
-        } catch (rsError) {
-          if (rsError.code !== 23) { // Already initialized
-            print('Error initializing replica set: ' + rsError);
-          } else {
-            print('Replica set already initialized');
-          }
-        }
+        // try {
+        //   rs.initiate({
+        //     _id: 'rs0',
+        //     members: [
+        //       {
+        //         _id: 0,
+        //         host: 'mongodb-0.mongodb.smartcity.svc.cluster.local:27017'
+        //       }
+        //     ]
+        //   });
+        //   print('Replica set initialized successfully');
+        // } catch (rsError) {
+        //   if (rsError.code !== 23) { // Already initialized
+        //     print('Error initializing replica set: ' + rsError);
+        //   } else {
+        //     print('Replica set already initialized');
+        //   }
+        // }
         
       } else {
         print('Users already exist, skipping initialization');

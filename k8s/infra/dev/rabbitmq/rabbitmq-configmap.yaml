@@ -24,9 +24,8 @@ data:
     disk_free_limit.relative = 2.0
 
     # Queue Configuration
-    default_max_message_size = 134217728
-    channel_max = 2047
     max_message_size = 134217728
+    channel_max = 2047
 
     # Clustering (prepared for future scaling)
     cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
@@ -38,7 +37,7 @@ data:
     # Logging Configuration
     log.default.level = info
     log.console.level = info
-    log.console.output = stdout
+    log.console.stdio = stdout
     log.file.level = info
     log.file.rotation.date = $D0
     log.file.rotation.count = 20

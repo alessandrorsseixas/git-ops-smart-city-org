@@ -45,7 +45,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: postgres-secret
-              key: POSTGRES_USER
+              key: postgres-username
         - name: KC_DB_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -80,10 +80,10 @@ spec:
           mountPath: /opt/keycloak/data
         resources:
           requests:
-            cpu: "500m"
-            memory: "1Gi"
+            cpu: "300m"
+            memory: "512Mi"
           limits:
-            cpu: "1000m"
+            cpu: "600m"
             memory: "2Gi"
         readinessProbe:
           httpGet:
@@ -116,17 +116,3 @@ spec:
       - name: keycloak-data
         persistentVolumeClaim:
           claimName: keycloak-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: keycloak
-  labels:
-    app: keycloak
-spec:
-  ports:
-    - port: 8080
-      targetPort: 8080
-  selector:
-    app: keycloak
-  type: ClusterIP

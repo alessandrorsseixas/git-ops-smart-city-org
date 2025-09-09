@@ -73,7 +73,6 @@ spec:
               mountPath: /etc/rabbitmq
             - name: rabbitmq-enabled-plugins
               mountPath: /etc/rabbitmq/enabled_plugins
-              subPath: enabled_plugins
           readinessProbe:
             exec:
               command:
@@ -110,10 +109,10 @@ spec:
           resources:
             requests:
               cpu: "250m"
-              memory: "512Mi"
+              memory: "256Mi"
             limits:
               cpu: "500m"
-              memory: "1Gi"
+              memory: "512Mi"
           lifecycle:
             preStop:
               exec:
@@ -131,6 +130,9 @@ spec:
         - name: rabbitmq-enabled-plugins
           configMap:
             name: rabbitmq-config
+            items:
+            - key: enabled_plugins
+              path: enabled_plugins
 ---
 apiVersion: v1
 kind: Service

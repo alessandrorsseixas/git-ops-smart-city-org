@@ -8,7 +8,7 @@ metadata:
 resources:
   - mongodb-pvc.yaml
   - mongodb-backup-pvc.yaml
-  - mongodb-service.yaml
+  - mongo-service.yaml
   - mongodb-metrics-service.yaml
   - mongodb-secret.yaml
   - mongodb-configmap.yaml
