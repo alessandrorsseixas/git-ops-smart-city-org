@@ -27,6 +27,9 @@ resources:
   # GitOps and CI/CD
   - argocd/
 
+  # Application components
+  - ../../../gitops/dev/house-control/
+
   # Additional PVCs
   - n8n-pvc.yaml
 

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: house-control
+  namespace: smart-city
+  labels:
+    app: house-control
+    component: application
+    environment: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: house-control
+  template:
+    metadata:
+      labels:
+        app: house-control
+        component: application
+        environment: development
+    spec:
+      containers:
+      - name: house-control
+        image: house-control:latest  # Replace with your actual image
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: config-volume
+        configMap:
+          name: house-control-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: house-control
+  namespace: smart-city
+  labels:
+    app: house-control
+    component: application
+    environment: development
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: house-control
+  type: ClusterIP

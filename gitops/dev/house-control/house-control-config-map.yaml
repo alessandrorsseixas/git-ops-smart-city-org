@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: house-control-config
+  namespace: smartcity
+  labels:
+    app: house-control
+    component: application
+    environment: development
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/house_control"
+  SPRING_REDIS_HOST: "redis"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_RABBITMQ_HOST: "rabbitmq"
+  SPRING_RABBITMQ_PORT: "5672"
+  KEYCLOAK_AUTH_SERVER_URL: "http://keycloak:8080/auth"
+  KEYCLOAK_REALM: "smartcity"
+  KEYCLOAK_RESOURCE: "house-control"
+  HOUSE_COMMAND_QUEUE: "house.commands.q"
