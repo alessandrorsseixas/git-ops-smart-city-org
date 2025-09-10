@@ -1,0 +1,35 @@
+# redis-values-minikube.yaml
+# Configuração otimizada para rodar o Redis da Bitnami em Minikube.
+
+# --- Arquitetura ---
+# Definimos a arquitetura como 'standalone' (instância única).
+# A arquitetura 'replication' (com primário e réplicas) é desnecessária para estudo.
+architecture: "standalone"
+
+# --- Autenticação ---
+# É uma boa prática sempre habilitar a autenticação.
+# Para estudo, podemos usar uma senha diretamente, mas o ideal seria um Secret.
+auth:
+  enabled: true
+  password: "redis123" # Troque por uma senha simples para seu estudo
+
+# --- Persistência ---
+# Desabilitamos completamente a persistência de dados.
+# O Redis será usado como um cache efêmero. Os dados serão perdidos se o Pod reiniciar.
+# Isso remove a necessidade de um PersistentVolumeClaim, economizando disco e complexidade.
+master:
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: "50m"      # Pede 0.05 de um core de CPU
+      memory: "64Mi"    # Garante 64MB de RAM
+    limits:
+      cpu: "200m"     # Limita o uso a 0.2 de um core de CPU
+      memory: "256Mi"   # Limita o uso a 256MB de RAM
+
+# --- Desabilitar Métricas ---
+# Para manter a instalação o mais leve possível, desabilitamos o exportador de métricas.
+# Se precisar monitorar o Redis, você pode habilitar isso posteriormente.
+metrics:
+  enabled: true

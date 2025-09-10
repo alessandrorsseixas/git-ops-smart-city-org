@@ -1,6 +1,6 @@
 kind: Namespace
 apiVersion: v1
 metadata:
-  name: smartcity
+  name: infrastructure
   labels:
-    name: smartcity
+    name: infrastructure

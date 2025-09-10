@@ -3,16 +3,16 @@ set -euo pipefail
 
 # run.sh - Orquestra a execução dos scripts de provisioning/dev em ordem recomendada
 # Local: scripts/dev
-# Objetivo: executar os scripts que preparam o ambiente local (minikube, ingress, certs, rancher)
+# Objetivo: executar os scripts que preparam o ambiente local completo (minikube, ingress, certs, rancher, infraestrutura Smart City)
 # Uso: ./run.sh [-n namespace] [-c component1,component2] [--dry-run]
 
 # Ordem recomendada (executa todos por padrão):
 # 0) diagnose-minikube.sh --reset -> limpa e recria cluster Minikube completamente
 # 1) install-prereqs.sh        -> valida pré-requisitos locais (kubectl, helm, minikube, openssl)
-# 2) install-rancher-minikube.sh -> instala Rancher via Helm 
+# 2) install-rancher-minikube.sh -> instala Rancher via Helm
 # 3) install-ingress.sh        -> configura Ingress Controller
 # 4) install-cert.sh           -> gera certificado self-signed e cria secret no cluster
-# 5) deploy/deploy-all.sh      -> deploy completo da infraestrutura Smart City + ArgoCD
+# 5) deploy-all-infrastructure.sh -> deploy completo da infraestrutura Smart City (PostgreSQL, Redis, RabbitMQ, Prometheus, ArgoCD)
 # 6) update-hosts.sh           -> atualiza /etc/hosts com domínios necessários
 # Comentário: os scripts estão escritos para serem idempotentes e seguros para reexecução.
 
@@ -72,6 +72,7 @@ sequence=(
   "install-rancher-minikube.sh"
   "install-ingress.sh"
   "install-cert.sh"
+  "../../k8s/infra/dev/deploy-all-infrastructure.sh"
 )
 
 # Se componentes foram passados, filtrar a sequência
@@ -105,31 +106,8 @@ done
 
 # Executar atualização do /etc/hosts APÓS o deploy completo
 echo ""
-echo "🌐 Atualizando /etc/hosts com domínios necessários..."
-UPDATE_HOSTS_SCRIPT="$SCRIPTS_DIR/update-hosts.sh"
-if [[ -f "$UPDATE_HOSTS_SCRIPT" ]]; then
-    chmod +x "$UPDATE_HOSTS_SCRIPT"
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        echo "DRY RUN: $UPDATE_HOSTS_SCRIPT"
-    else
-        if [[ "$EUID" -eq 0 ]]; then
-            # Já está rodando como root
-            "$UPDATE_HOSTS_SCRIPT" || {
-                echo "⚠️ Não foi possível atualizar /etc/hosts automaticamente"
-                echo "💡 Execute manualmente: sudo $UPDATE_HOSTS_SCRIPT"
-            }
-        else
-            # Precisa de sudo
-            echo "🔑 Atualizando /etc/hosts (pode solicitar senha sudo)..."
-            sudo "$UPDATE_HOSTS_SCRIPT" || {
-                echo "⚠️ Não foi possível atualizar /etc/hosts automaticamente"
-                echo "💡 Execute manualmente: sudo $UPDATE_HOSTS_SCRIPT"
-            }
-        fi
-    fi
-else
-    echo "⚠️ Script update-hosts.sh não encontrado: $UPDATE_HOSTS_SCRIPT"
-fi
+echo "🌐 /etc/hosts já foi configurado automaticamente pelo script deploy-all-infrastructure.sh"
+echo "   (não é necessário executar update-hosts.sh separadamente)"
 
 echo ""
 echo "✅ Execução da sequência concluída!"
@@ -139,12 +117,17 @@ echo ""
 echo "📋 O que foi configurado:"
 echo "   1. ✅ Pré-requisitos validados"
 echo "   2. ✅ Rancher + Minikube instalados"
-echo "   3. ✅ Certificados configurados"
-echo "   4. ✅ Infraestrutura Smart City deployada"
-echo "   5. ✅ ArgoCD GitOps configurado"
-echo "   6. ✅ /etc/hosts atualizado automaticamente"
+echo "   3. ✅ Ingress Controller configurado"
+echo "   4. ✅ Certificados SSL configurados"
+echo "   5. ✅ Infraestrutura Smart City deployada (PostgreSQL, Redis, RabbitMQ, Prometheus, ArgoCD)"
+echo "   6. ✅ /etc/hosts configurado automaticamente (integrado no deploy da infraestrutura)"
 echo ""
 echo "🌐 Próximos passos:"
 echo "   - Acesse ArgoCD: https://argocd.dev.smartcity.local"
-echo "   - Usuário ArgoCD: admin / Senha: admin123"
+echo "     Usuário: admin / Senha: admin123"
+echo "   - Acesse RabbitMQ Management: http://rabbitmq.dev.smartcity.local"
+echo "     Usuário: admin / Senha: admin123"
+echo "   - Acesse Prometheus: http://prometheus.dev.smartcity.local"
+echo "   - PostgreSQL: psql -h localhost -p 5432 -U smartcity -d smartcity"
+echo "   - Redis: redis-cli -h localhost -p 6379 -a redis123"
 echo ""

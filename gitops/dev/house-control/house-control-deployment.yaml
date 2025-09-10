@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: house-control
-  namespace: smart
+  namespace: house-control
   labels:
     app: house-control-container
     component: application

@@ -1,286 +1,314 @@
-# Smart City Infrastructure - Kustomize Structure
+# Smart City Infrastructure - Development Environment
 
-Este documento explica a estrutura organizada do Kustomize para a infraestrutura do Smart City.
+Este documento descreve a infraestrutura de desenvolvimento do Smart City, organizada com Kustomize e Helm para facilitar o deployment no Minikube.
+
+## 🎯 Script Master de Deployment
+
+### `deploy-all-infrastructure.sh`
+
+O script principal para deployment completo da infraestrutura. **Recomendado para uso geral**.
+
+#### Funcionalidades
+- ✅ **Verificação automática de pré-requisitos** (kubectl, helm, minikube)
+- ✅ **Criação automática do namespace** `infrastructure`
+- ✅ **Deployment sequencial** de todos os componentes
+- ✅ **Configuração automática do /etc/hosts** (com privilégios de root)
+- ✅ **Verificação final** do status de todos os componentes
+- ✅ **Informações completas de acesso** aos serviços
+- ✅ **Tratamento de erros** e logs coloridos
+- ✅ **Cálculo de tempo** total de deployment
+
+#### Como usar
+```bash
+# Deployment completo (recomendado)
+./deploy-all-infrastructure.sh
+
+# Com configuração automática do /etc/hosts
+sudo ./deploy-all-infrastructure.sh
+```
+
+#### O que o script faz
+1. **Verifica pré-requisitos**: kubectl, helm, minikube
+2. **Cria namespace**: `infrastructure`
+3. **Deploy do Ingress**: NGINX Ingress Controller
+4. **Deploy dos bancos**: PostgreSQL e Redis
+5. **Deploy da mensageria**: RabbitMQ
+6. **Deploy do monitoramento**: Prometheus
+7. **Deploy do GitOps**: ArgoCD
+8. **Configura /etc/hosts**: Domínios locais automaticamente
+9. **Verifica status**: Todos os pods e serviços
+10. **Mostra informações de acesso**: URLs e portas
+
+#### Configuração automática do /etc/hosts
+O script detecta automaticamente o IP do Minikube e configura os domínios no `/etc/hosts`:
+
+```bash
+# Exemplo de configuração automática
+192.168.58.2 postgres.dev.smartcity.local
+192.168.58.2 redis.dev.smartcity.local
+192.168.58.2 rabbitmq.dev.smartcity.local
+192.168.58.2 prometheus.dev.smartcity.local
+192.168.58.2 argocd.dev.smartcity.local
+```
+
+#### Tratamento de privilégios
+- **Sem sudo**: Mostra instruções para configuração manual
+- **Com sudo**: Configura automaticamente o `/etc/hosts`
+- **Detecção inteligente**: Funciona mesmo quando executado como root
 
 ## 📁 Estrutura de Diretórios
 
 ```
 k8s/infra/dev/
-├── kustomization.yaml          # Kustomization principal
-├── mongo/                      # MongoDB
-│   ├── kustomization.yaml
-│   └── [manifests...]
-├── postgres/                   # PostgreSQL
-│   ├── kustomization.yaml
-│   └── [manifests...]
-├── redis/                      # Redis
-│   ├── kustomization.yaml
-│   └── [manifests...]
-├── rabbitmq/                   # RabbitMQ
-│   ├── kustomization.yaml
-│   └── [manifests...]
-├── keycloack/                  # Keycloak
-│   ├── kustomization.yaml
-│   └── [manifests...]
-├── argocd/                     # ArgoCD
-│   ├── kustomization.yaml
-│   └── [manifests...]
-└── n8n-pvc.yaml               # PVC adicional
+├── README.md                    # Este arquivo
+├── infrastructure-namespace.yaml # Definição do namespace
+├── infrastructure-ingress.yaml   # Ingress para exposição dos serviços
+├── infrastructure-tcp-services.yaml # Configurações TCP para serviços não-HTTP
+├── deploy-infrastructure-ingress.sh # Script de deployment do Ingress
+├── ingress-deploy/               # Diretório específico do Ingress
+│   └── README.md
+├── postgres-deploy/            # PostgreSQL deployment
+│   ├── README.md
+│   ├── deploy.sh
+│   └── postgres-minikube-values.yaml
+├── rabbitmq-deploy/            # RabbitMQ deployment
+│   ├── README.md
+│   ├── deploy-rabbitmq.sh
+│   └── rabbitmq-values-minikube.yaml
+├── redis-deploy/               # Redis deployment
+│   ├── README.md
+│   ├── deploy-redis.sh
+│   └── redis-values-minikube.yaml
+├── prometheus-deploy/          # Prometheus deployment
+│   ├── README.md
+│   ├── deploy-prometheus.sh
+│   └── prometheus-values-minikube.yaml
+└── argo-cd-deploy/             # ArgoCD deployment
+    ├── README.md
+    ├── deploy-argo-cd.sh
+    └── argo-cd-values-minikube.yaml
 ```
 
-## 🏗️ Arquitetura do Kustomize
+## 🚀 Componentes da Infraestrutura
 
-### Kustomization Principal (`kustomization.yaml`)
+### Banco de Dados
+- **PostgreSQL**: Banco de dados principal da aplicação
+- **Redis**: Cache e armazenamento de sessões
 
-O arquivo principal coordena todos os componentes:
+### Mensageria
+- **RabbitMQ**: Sistema de mensageria assíncrona
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+### Monitoramento
+- **Prometheus**: Coleta de métricas e alertas
 
-metadata:
-  name: smartcity-infrastructure
-  namespace: smartcity
+### GitOps
+- **ArgoCD**: Continuous Delivery para Kubernetes
 
-resources:
-  - mongo/          # Referencia kustomization.yaml do mongo
-  - postgres/       # Referencia kustomization.yaml do postgres
-  - redis/          # Referencia kustomization.yaml do redis
-  - rabbitmq/       # Referencia kustomization.yaml do rabbitmq
-  - keycloack/      # Referencia kustomization.yaml do keycloak
-  - argocd/         # Referencia kustomization.yaml do argocd
-  - n8n-pvc.yaml    # PVC individual
+## 🌐 Ingress e Exposição de Serviços
+
+Todos os serviços são expostos através de domínios padronizados usando o NGINX Ingress Controller:
+
+### Domínios Configurados
+- **PostgreSQL**: `postgres.dev.smartcity.local:5432`
+- **RabbitMQ**: `rabbitmq.dev.smartcity.local:15672`
+- **Redis**: `redis.dev.smartcity.local:6379`
+- **Prometheus**: `prometheus.dev.smartcity.local:9090`
+- **ArgoCD**: `argocd.dev.smartcity.local:8080`
+- **Grafana**: `grafana.dev.smartcity.local:80`
+- **Keycloak**: `keycloak.dev.smartcity.local:8080`
+- **MongoDB**: `mongodb.dev.smartcity.local:27017`
+- **Smart City App**: `app.dev.smartcity.local:8080`
+- **Smart City API**: `api.dev.smartcity.local:8080`
+
+### Deployment do Ingress
+```bash
+# Deploy do Ingress Controller e regras
+./deploy-infrastructure-ingress.sh
+
+# Ou manualmente
+kubectl apply -f infrastructure-ingress.yaml
+kubectl apply -f infrastructure-tcp-services.yaml
 ```
 
-### Kustomization por Componente
-
-Cada componente tem seu próprio `kustomization.yaml`:
-
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-metadata:
-  name: [component-name]
-  namespace: smartcity
-
-commonLabels:
-  app: [component-name]
-  component: [component-type]
-  environment: development
-  managed-by: kustomize
-
-resources:
-  - [component]-secret.yaml
-  - [component]-configmap.yaml
-  - [component]-pvc.yaml
-  - [component]-deployment.yaml
-  # ... outros manifests
-
-images:
-  - name: [image-name]
-    newTag: "[version]"
+### Configuração Local (/etc/hosts)
+```bash
+# Adicionar ao /etc/hosts (substitua pelo IP do Minikube)
+192.168.49.2 postgres.dev.smartcity.local
+192.168.49.2 rabbitmq.dev.smartcity.local
+192.168.49.2 redis.dev.smartcity.local
+# ... outros domínios
 ```
 
-## 🚀 Como Usar
+## 🛠️ Pré-requisitos
 
-### Deploy de Toda a Infraestrutura
+- Minikube instalado e em execução
+- kubectl configurado
+- Helm 3.x instalado
+- Git
+
+## 📋 Namespace
+
+Todos os componentes são deployados no namespace `infrastructure`:
 
 ```bash
-# Deploy tudo
-kubectl apply -k k8s/infra/dev/
-
-# Verificar status
-kubectl get all -n smartcity
+kubectl create namespace infrastructure
 ```
 
-### Deploy de Componente Específico
+## 🚀 Deployment Rápido
+
+### Método 1: Script Master (Recomendado)
 
 ```bash
-# Deploy apenas MongoDB
-kubectl apply -k k8s/infra/dev/mongo/
+# Deployment completo e automatizado
+./deploy-all-infrastructure.sh
 
-# Deploy apenas PostgreSQL
-kubectl apply -k k8s/infra/dev/postgres/
-
-# Deploy apenas Redis
-kubectl apply -k k8s/infra/dev/redis/
+# Ou com configuração automática do /etc/hosts
+sudo ./deploy-all-infrastructure.sh
 ```
 
-### Deploy com Overlays (Para Diferentes Ambientes)
+**Vantagens:**
+- ✅ Tudo automatizado em sequência
+- ✅ Verificações de pré-requisitos
+- ✅ Configuração automática do /etc/hosts
+- ✅ Logs coloridos e informativos
+- ✅ Tratamento de erros
+- ✅ Informações completas de acesso
+
+### Método 2: Deployment Individual
+
+Para desenvolvimento ou troubleshooting, faça o deployment individual de cada componente:
 
 ```bash
-# Para staging
-kubectl apply -k k8s/infra/staging/
+# 1. Ingress Controller (sempre primeiro)
+./deploy-infrastructure-ingress.sh
 
-# Para produção
-kubectl apply -k k8s/infra/prod/
+# 2. PostgreSQL
+cd postgres-deploy && ./deploy.sh
+
+# 3. Redis
+cd ../redis-deploy && ./deploy-redis.sh
+
+# 4. RabbitMQ
+cd ../rabbitmq-deploy && ./deploy-rabbitmq.sh
+
+# 5. Prometheus
+cd ../prometheus-deploy && ./deploy-prometheus.sh
+
+# 6. ArgoCD
+cd ../argo-cd-deploy && ./deploy-argo-cd.sh
 ```
 
-## ⚙️ Configurações por Ambiente
+**Quando usar:** Desenvolvimento, troubleshooting ou quando precisar de controle fino sobre cada componente.
 
-### Desenvolvimento (`dev/`)
-- Recursos mínimos
-- Configurações de debug habilitadas
-- Backups frequentes
-- Acesso administrativo completo
-
-### Staging (`staging/`)
-- Recursos intermediários
-- Configurações otimizadas
-- Backups diários
-- Acesso controlado
-
-### Produção (`prod/`)
-- Recursos máximos
-- Configurações de performance
-- Backups redundantes
-- Segurança máxima
-
-## 🏷️ Labels e Annotations
-
-### Labels Comuns
-
-Todos os recursos recebem automaticamente:
-
-```yaml
-labels:
-  environment: development
-  managed-by: kustomize
-  project: smartcity
-  app: [component-name]
-  component: [component-type]
-```
-
-### Labels por Componente
-
-Cada componente adiciona labels específicos:
-
-- **MongoDB**: `component: database`, `app: mongodb`
-- **PostgreSQL**: `component: database`, `app: postgres`
-- **Redis**: `component: cache`, `app: redis`
-- **RabbitMQ**: `component: messaging`, `app: rabbitmq`
-
-## 🔄 Estratégia de Deploy
-
-### Ordem de Deploy
-
-1. **Secrets e ConfigMaps** - Primeiro
-2. **PersistentVolumeClaims** - Segundo
-3. **Services** - Terceiro
-4. **Deployments/StatefulSets** - Quarto
-5. **NetworkPolicies** - Quinto
-6. **CronJobs** - Último
-
-### Dependências
-
-- **MongoDB/PostgreSQL**: Não têm dependências
-- **Redis**: Não tem dependências
-- **RabbitMQ**: Não tem dependências
-- **Keycloak**: Pode depender de PostgreSQL
-- **ArgoCD**: Independente
-
-## 📊 Monitoramento
-
-### Health Checks
+## 🔍 Verificação do Deployment
 
 ```bash
-# Verificar todos os componentes
-kubectl get all -n smartcity
+# Verificar pods
+kubectl get pods -n infrastructure
 
-# Verificar por componente
-kubectl get all -n smartcity -l app=mongodb
-kubectl get all -n smartcity -l app=postgres
-kubectl get all -n smartcity -l component=database
+# Verificar services
+kubectl get svc -n infrastructure
+
+# Verificar ingress
+kubectl get ingress -n infrastructure
 ```
 
-### Logs
+## 📊 Acesso aos Serviços
+
+### PostgreSQL
+```bash
+# Port forward
+kubectl port-forward -n infrastructure svc/postgres-external 5432:5432
+
+# Conectar
+psql -h localhost -p 5432 -U smartcity -d smartcity
+```
+
+### RabbitMQ Management
+```bash
+# Port forward
+kubectl port-forward -n infrastructure svc/rabbitmq-management 15672:15672
+
+# Acessar: http://localhost:15672
+# User: admin
+# Password: admin123
+```
+
+### Redis
+```bash
+# Port forward
+kubectl port-forward -n infrastructure svc/redis 6379:6379
+
+# Conectar
+redis-cli -h localhost -p 6379
+```
+
+## 🧹 Limpeza
+
+Para remover toda a infraestrutura:
 
 ```bash
-# Logs por componente
-kubectl logs -n smartcity -l app=redis
-kubectl logs -n smartcity -l app=rabbitmq
+# Remover todos os componentes
+kubectl delete namespace infrastructure
 
-# Logs de backup jobs
-kubectl logs -n smartcity -l component=backup
+# Ou remover individualmente
+helm uninstall postgres -n infrastructure
+helm uninstall redis -n infrastructure
+helm uninstall rabbitmq -n infrastructure
+helm uninstall prometheus -n infrastructure
+helm uninstall argocd -n infrastructure
 ```
 
-## 🔧 Manutenção
+## 📝 Notas Importantes
 
-### Atualização de Imagens
+- Todos os deployments estão configurados para Minikube
+- As senhas padrão estão definidas nos arquivos values
+- Os serviços externos usam ClusterIP para compatibilidade com Minikube
+- Use port-forwarding para acessar serviços externos
 
-Para atualizar versões das imagens:
+## 🔧 Desenvolvimento Local
 
-```yaml
-# Em kustomization.yaml do componente
-images:
-  - name: mongo
-    newTag: "7.0"  # Atualizar versão
-```
+Para desenvolvimento local, use os scripts de deployment em cada diretório específico. Cada componente tem seu próprio README com instruções detalhadas.
 
-### Scaling
+## 📚 Documentação
+
+Cada diretório de deployment contém documentação detalhada:
+
+- **[PostgreSQL](postgres-deploy/README.md)**: Guia completo de deployment, configuração e troubleshooting
+- **[RabbitMQ](rabbitmq-deploy/README.md)**: Configuração de mensageria e management UI
+- **[Redis](redis-deploy/README.md)**: Cache e armazenamento de sessões
+- **[Prometheus](prometheus-deploy/README.md)**: Monitoramento e métricas
+- **[ArgoCD](argo-cd-deploy/README.md)**: GitOps e continuous delivery
+- **[Ingress](ingress-deploy/README.md)**: Configuração de acesso externo e domínios
+
+## 📋 Scripts de Deployment
+
+### Script Master
+- **`deploy-all-infrastructure.sh`**: Script completo que executa todos os deployments em sequência
+
+### Scripts Individuais
+Cada componente possui seu próprio script de deployment localizado em:
+- `postgres-deploy/deploy.sh`
+- `rabbitmq-deploy/deploy-rabbitmq.sh`
+- `redis-deploy/deploy-redis.sh`
+- `prometheus-deploy/deploy-prometheus.sh`
+- `argo-cd-deploy/deploy-argo-cd.sh`
+- `ingress-deploy/deploy-infrastructure-ingress.sh`
+
+## 🚪 Acesso Externo
+
+Para expor os serviços externamente, utilize o Ingress:
 
 ```bash
-# Scale Redis
-kubectl scale deployment redis --replicas=2 -n smartcity
+# Criar o Ingress
+kubectl apply -f infrastructure-ingress.yaml
 
-# Scale RabbitMQ
-kubectl scale deployment rabbitmq --replicas=3 -n smartcity
+# Verificar o Ingress
+kubectl get ingress -n infrastructure
 ```
 
-### Backup e Restore
+### Observações sobre o Ingress
 
-Cada componente tem seus próprios scripts de backup:
-
-```bash
-# MongoDB
-cd k8s/infra/dev/mongo/
-./deploy-mongodb.sh
-
-# PostgreSQL
-cd k8s/infra/dev/postgres/
-./deploy-postgres.sh
-
-# Redis
-cd k8s/infra/dev/redis/
-./deploy-redis.sh
-
-# RabbitMQ
-cd k8s/infra/dev/rabbitmq/
-./deploy-rabbitmq.sh
-```
-
-## 🚨 Troubleshooting
-
-### Problemas Comuns
-
-1. **PVC Pending**: Verificar storage class
-2. **Pod CrashLoopBackOff**: Verificar logs e configurações
-3. **Service Unavailable**: Verificar selectors e labels
-4. **Network Issues**: Verificar NetworkPolicies
-
-### Comandos Úteis
-
-```bash
-# Ver todos os recursos
-kubectl get all -n smartcity
-
-# Ver recursos por componente
-kubectl get all -n smartcity -l component=database
-
-# Ver events
-kubectl get events -n smartcity --sort-by=.metadata.creationTimestamp
-
-# Ver resource usage
-kubectl top pods -n smartcity
-```
-
-## 📚 Referências
-
-- [Kustomize Documentation](https://kubectl.docs.kubernetes.io/references/kustomize/)
-- [Kubernetes Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
-- [GitOps with ArgoCD](https://argo-cd.readthedocs.io/)
-
----
-
-**Nota**: Esta estrutura facilita a manutenção, escalabilidade e organização da infraestrutura do Smart City, seguindo as melhores práticas do Kubernetes e Kustomize.
+- O Ingress é configurado para rotear o tráfego externo para os serviços internos
+- Certifique-se de que o controlador de Ingress está instalado e configurado no Minikube
+- Para serviços não-HTTP, use o arquivo `infrastructure-tcp-services.yaml` para configuração adicional

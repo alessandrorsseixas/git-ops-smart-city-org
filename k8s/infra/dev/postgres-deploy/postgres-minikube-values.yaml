@@ -1,0 +1,32 @@
+# postgres-minikube-values.yaml
+
+# --- Arquitetura ---
+# 'standalone' é a escolha ideal para Minikube.
+# Evita a criação de réplicas, economizando CPU, RAM e disco.
+architecture: "standalone"
+
+# --- Autenticação ---
+# Para fins de estudo, definir as credenciais aqui é aceitável.
+auth:
+  username: "smartcity"
+  password: "smartcity123" # Troque por uma senha simples
+  database: "smartcity"
+
+# --- Persistência de Dados ---
+# Habilitada para que seus dados não sejam perdidos se o Pod reiniciar.
+pprimary:
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# --- Desabilitar Métricas ---
+# O coletor de métricas do Prometheus consome recursos e não é necessário para estudo.
+metrics:
+  enabled: true
