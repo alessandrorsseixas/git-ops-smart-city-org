@@ -23,4 +23,4 @@ spec:
             name: house-control
             port:
               # Porta do Service para a qual o Ingress vai rotear.
-              number: 8080
+              number: 8081

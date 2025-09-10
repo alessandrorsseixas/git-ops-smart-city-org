@@ -23,7 +23,7 @@ spec:
       - name: house-control-container
         image: ghcr.io/alessandrorsseixas/smart-city-org/house-control:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
           name: http
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -43,7 +43,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /actuator/health
-            port: 8080
+            port: 8081
           initialDelaySeconds: 60
           periodSeconds: 30
           timeoutSeconds: 5
@@ -51,7 +51,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /actuator/health
-            port: 8080
+            port: 8081
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
