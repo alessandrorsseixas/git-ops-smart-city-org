@@ -2,59 +2,52 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: house-control-config
-  namespace: smartcity
+  namespace: house-control
   labels:
     app: house-control-container
     component: application
     environment: development
 data:
-  application.yml: |
-    # Spring Boot configuration for House Control application
+  # Spring Boot configuration
+  SPRING_PROFILES_ACTIVE: "dev"
+  SPRING_CONFIG_LOCATION: "/app/config/application.yml"
 
-    spring:
-      datasource:
-        url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/house_control}
-        username: ${SPRING_DATASOURCE_USERNAME:postgres}
-        password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-      redis:
-        host: ${SPRING_REDIS_HOST:redis}
-        port: ${SPRING_REDIS_PORT:6379}
-      rabbitmq:
-        host: ${SPRING_RABBITMQ_HOST:rabbitmq}
-        port: ${SPRING_RABBITMQ_PORT:5672}
-        username: ${RABBITMQ_USERNAME:guest}
-        password: ${RABBITMQ_PASSWORD:guest}
+  # Database configuration
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.infrastructure.svc.cluster.local:5432/smartcity"
+  SPRING_DATASOURCE_USERNAME: "smartcity"
+  SPRING_DATASOURCE_PASSWORD: "smartcity123"
 
-    keycloak:
-      auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://keycloak:8080/auth}
-      realm: ${KEYCLOAK_REALM:smartcity}
-      resource: ${KEYCLOAK_RESOURCE:house-control}
-      client-secret: ${KEYCLOAK_CLIENT_SECRET:house-control-secret}
+  # Redis configuration
+  SPRING_REDIS_HOST: "redis.infrastructure.svc.cluster.local"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_REDIS_PASSWORD: "redis123"
 
-    app:
-      messaging:
-        queues:
-          house-commands: ${HOUSE_COMMAND_QUEUE:house.commands.q}
+  # RabbitMQ configuration
+  SPRING_RABBITMQ_HOST: "rabbitmq.infrastructure.svc.cluster.local"
+  SPRING_RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: "admin"
+  RABBITMQ_PASSWORD: "admin123"
 
-    logging:
-      level:
-        root: INFO
-        org.springframework: INFO
-        org.springframework.security: DEBUG
-      pattern:
-        console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-        file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  # Keycloak configuration
+  KEYCLOAK_AUTH_SERVER_URL: "http://keycloak:8080/auth"
+  KEYCLOAK_REALM: "smartcity"
+  KEYCLOAK_RESOURCE: "house-control"
+  KEYCLOAK_CLIENT_SECRET: "house-control-secret"
 
-    management:
-      endpoints:
-        web:
-          exposure:
-            include: health,info,metrics
-      endpoint:
-        health:
-          show-details: when-authorized
+  # Application configuration
+  HOUSE_COMMAND_QUEUE: "house.commands.q"
 
-    server:
-      port: 8080
-      servlet:
-        context-path: /
+  # Logging configuration
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: "INFO"
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: "DEBUG"
+  LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  LOGGING_PATTERN_FILE: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+  # Management endpoints
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "when-authorized"
+
+  # Server configuration
+  SERVER_PORT: "8080"
+  SERVER_SERVLET_CONTEXT_PATH: "/"

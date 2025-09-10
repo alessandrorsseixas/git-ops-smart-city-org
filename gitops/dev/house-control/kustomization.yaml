@@ -3,12 +3,17 @@ kind: Kustomization
 
 metadata:
   name: house-control
-  namespace: smart
+  namespace: house-control
 
 resources:
+  - house-control-namespace.yaml
   - house-control-config-map.yaml
   - house-control-secret.yaml
   - house-control-deployment.yaml
+  - house-control-service.yaml
+  - house-control-ingress.yaml
+  - house-control-hpa.yaml
+  - house-control-network-policy.yaml
 
 commonLabels:
   app: house-control-container
