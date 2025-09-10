@@ -38,7 +38,7 @@ kubectl apply -f gitops/dev/house-control/house-control-deployment.yaml
 kubectl apply -f gitops/dev/house-control/house-control-service.yaml
 kubectl apply -f gitops/dev/house-control/house-control-ingress.yaml
 kubectl apply -f gitops/dev/house-control/house-control-hpa.yaml
-kubectl apply -f gitops/dev/house-control/house-control-network-policy.yaml
+# kubectl apply -f gitops/dev/house-control/house-control-network-policy.yaml  # Arquivo não existe ainda
 ```
 
 ## 🌐 Acesso à Aplicação
@@ -178,7 +178,7 @@ kubectl exec -n house-control -it deployment/house-control -- nc -zv postgres.in
 - `house-control-service.yaml` - Service para exposição interna
 - `house-control-ingress.yaml` - Ingress para exposição externa
 - `house-control-hpa.yaml` - Auto-scaling baseado em CPU
-- `house-control-network-policy.yaml` - Políticas de rede
+- `house-control-network-policy.yaml` - Políticas de rede *(arquivo não existe)*
 - `kustomization.yaml` - Configuração do Kustomize
 
 ## 🚨 Troubleshooting

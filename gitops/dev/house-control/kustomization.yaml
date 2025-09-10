@@ -13,7 +13,6 @@ resources:
   - house-control-service.yaml
   - house-control-ingress.yaml
   - house-control-hpa.yaml
-  - house-control-network-policy.yaml
 
 commonLabels:
   app: house-control-container
