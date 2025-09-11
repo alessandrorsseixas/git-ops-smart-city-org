@@ -1,276 +1,351 @@
 # Smart City GitOps Platform
 
-A complete, production-ready Kubernetes infrastructure for Smart City applications using GitOps principles with ArgoCD.
+A Kubernetes-based GitOps platform for Smart City applications with infrastructure automation and application deployment.
 
 ## 🎯 Overview
 
-This repository provides a comprehensive infrastructure setup for Smart City applications, featuring:
+This repository provides GitOps configuration for Smart City applications, featuring:
 
-- **Multi-database support** (PostgreSQL, MongoDB, Redis)
-- **Message broker** (RabbitMQ) for event-driven architecture
-- **Identity management** (Keycloak) with OAuth2/OIDC
-- **GitOps deployment** (ArgoCD) for continuous delivery
-- **Production-ready configurations** with security, monitoring, and backups
-- **Kustomize-based** organization for multi-environment deployments
+- **Application deployments** using Kubernetes manifests and Kustomize
+- **Infrastructure as Code** with automated deployment scripts
+- **Microservices architecture** for House Control and other Smart City services
+- **Development environment** setup with Minikube support
+- **GitOps workflows** ready for ArgoCD integration
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Applications  │    │ Infrastructure   │    │    ArgoCD      │
-│   (GitOps)      │◄──►│   Components     │◄──►│  GitOps Platform│
+│   Applications  │    │ Infrastructure   │    │    GitOps      │
+│   (Microservices│◄──►│   Components     │◄──►│   Deployment   │
 ├─────────────────┤    ├─────────────────┤    ├─────────────────┤
-│ • Smart City    │    │ • PostgreSQL    │    │ • Web UI        │
-│   Services      │    │ • MongoDB       │    │ • API Server    │
-│ • Microservices │    │ • Redis         │    │ • Repo Server   │
-│ • APIs          │    │ • RabbitMQ      │    │ • Controller    │
-│ • Web Apps      │    │ • Keycloak      │    │ • Notifications │
+│ • House Control │    │ • PostgreSQL    │    │ • Kustomize     │
+│ • Smart City    │    │ • Redis         │    │ • ArgoCD Ready  │
+│   Services      │    │ • RabbitMQ      │    │ • Helm Charts   │
+│ • APIs          │    │ • Prometheus    │    │ • Auto Deploy   │
+│ • Web Apps      │    │ • Ingress NGINX │    │ • Monitoring    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ## 📦 Components
 
-### Infrastructure (smartcity namespace)
-- **PostgreSQL** - Primary relational database with advanced configuration
-- **MongoDB** - Document database with replica set preparation
-- **Redis** - High-performance caching layer with persistence
-- **RabbitMQ** - Message broker with management UI and clustering
-- **Keycloak** - Identity and access management platform
-- **N8N** - Workflow automation and integration platform
+### Applications (house-control namespace)
+- **House Control** - Smart home management microservice with Spring Boot
+- **ConfigMap/Secret** - Configuration management with environment variables
+- **Ingress** - External access via NGINX Ingress Controller
+- **HPA** - Horizontal Pod Autoscaler for automatic scaling
+- **Service** - Internal service discovery and load balancing
 
-### GitOps Platform (argocd namespace)
-- **ArgoCD Server** - Web-based UI for GitOps operations
-- **Repo Server** - Processes Git repositories and generates manifests
-- **Application Controller** - Manages application lifecycle
-- **DEX Server** - OIDC authentication provider
-- **Notifications** - Alert and notification system
+### Infrastructure (infrastructure namespace)
+- **PostgreSQL** - Primary relational database with Helm deployment
+- **Redis** - High-performance caching layer with persistence
+- **RabbitMQ** - Message broker for event-driven architecture
+- **Prometheus** - Monitoring and metrics collection
+- **NGINX Ingress** - Load balancer and reverse proxy
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Kubernetes cluster** (Minikube, K3s, EKS, etc.)
+- **Kubernetes cluster** (Minikube recommended for development)
 - **kubectl** configured and connected to your cluster
-- **Minimum resources**: 2 CPU cores, 4GB RAM, 30GB storage
-- **Storage provisioner** (default StorageClass available)
+- **Helm 3.x** for infrastructure components
+- **NGINX Ingress Controller** installed in your cluster
+- **Minimum resources**: 2 CPU cores, 4GB RAM, 20GB storage
 
-### One-Command Deployment
+### Deploy Infrastructure
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/alessandrorsseixas/git-ops-smart-city-org.git
 cd git-ops-smart-city-org
 
-# Deploy everything
-./scripts/dev/deploy/deploy-all.sh
+# Deploy infrastructure components (PostgreSQL, Redis, RabbitMQ, Prometheus)
+cd k8s/infra/dev
+./deploy-all-infrastructure.sh
+
+# Configure /etc/hosts for local access
+echo "$(minikube ip) house-control.dev.smartcity.local" | sudo tee -a /etc/hosts
+echo "$(minikube ip) postgres.dev.smartcity.local" | sudo tee -a /etc/hosts
+echo "$(minikube ip) redis.dev.smartcity.local" | sudo tee -a /etc/hosts
+echo "$(minikube ip) rabbitmq.dev.smartcity.local" | sudo tee -a /etc/hosts
+echo "$(minikube ip) prometheus.dev.smartcity.local" | sudo tee -a /etc/hosts
 ```
 
-### Step-by-Step Deployment
+### Deploy Applications
 
 ```bash
-# 1. Deploy storage
-./scripts/dev/deploy/deploy-pvcs.sh
+# Deploy House Control application
+cd gitops/dev/house-control
+kubectl apply -k .
 
-# 2. Deploy infrastructure
-./scripts/dev/deploy/deploy-infra.sh
-
-# 3. Deploy ArgoCD
-./scripts/dev/deploy/deploy-argocd.sh
-```
-
-### Individual Component Deployment
-
-```bash
-# Deploy specific components
-./scripts/dev/deploy/deploy-component.sh postgres
-./scripts/dev/deploy/deploy-component.sh redis
-./scripts/dev/deploy/deploy-component.sh argocd
+# Or use the deployment script
+./deploy.sh
 ```
 
 ## 🌐 Access Information
 
-### ArgoCD GitOps Platform
-- **URL**: https://argocd.dev.smartcity.local
-- **Username**: `admin`
-- **Password**: Retrieved from deployment output
-- **GRPC**: argocd-grpc.dev.smartcity.local:443
+### Application Services
+- **House Control**: http://house-control.dev.smartcity.local
+  - Health Check: `/actuator/health`
+  - Metrics: `/actuator/metrics`
+  - Info: `/actuator/info`
 
-### Infrastructure Services (Internal)
-- **PostgreSQL**: postgres-service.smartcity.svc.cluster.local:5432
-- **MongoDB**: mongodb-service.smartcity.svc.cluster.local:27017
-- **Redis**: redis-service.smartcity.svc.cluster.local:6379
-- **RabbitMQ**: rabbitmq-service.smartcity.svc.cluster.local:5672
-- **RabbitMQ Management**: http://rabbitmq-service.smartcity.svc.cluster.local:15672
-- **Keycloak**: http://keycloak-service.smartcity.svc.cluster.local:8080
+### Infrastructure Services (via Ingress)
+- **PostgreSQL**: postgres.dev.smartcity.local:5432
+- **Redis**: redis.dev.smartcity.local:6379
+- **RabbitMQ Management**: http://rabbitmq.dev.smartcity.local:15672
+- **Prometheus**: http://prometheus.dev.smartcity.local:9090
 
 ### Default Credentials (Development Only)
 ```
-PostgreSQL: postgres/postgres
-MongoDB: admin/admin123
-Redis: (no authentication)
-RabbitMQ: admin/admin
-Keycloak: admin/admin
-ArgoCD: admin/[generated-password]
+PostgreSQL: smartcity/smartcity123
+Redis: redis123
+RabbitMQ: admin/admin123
 ```
 
-⚠️ **Important**: Change all default passwords in production!
+⚠️ **Important**: These are development credentials. Change them in production!
 
 ## 📁 Project Structure
 
 ```
 git-ops-smart-city-org/
-├── k8s/                          # Kubernetes manifests
-│   └── infra/
-│       └── dev/                  # Development environment
-│           ├── kustomization.yaml # Main Kustomize config
-│           ├── postgres/         # PostgreSQL component
-│           ├── mongo/            # MongoDB component
-│           ├── redis/            # Redis component
-│           ├── rabbitmq/         # RabbitMQ component
-│           ├── keycloack/        # Keycloak component
-│           └── argocd/           # ArgoCD component
-├── scripts/
-│   └── dev/
-│       ├── deploy/               # Deployment scripts
-│       │   ├── deploy-all.sh     # Complete deployment
-│       │   ├── deploy-infra.sh   # Infrastructure only
-│       │   ├── deploy-argocd.sh  # ArgoCD only
-│       │   ├── deploy-pvcs.sh    # Storage only
-│       │   ├── deploy-component.sh # Individual components
-│       │   └── kustomize-examples.sh # Kustomize examples
-│       └── install/              # Installation helpers
+│──── dev/                        # Development environment
+│       └── house-control/        # House Control microservice
+│           ├── kustomization.yaml
+│           ├── house-control-namespace.yaml
+│           ├── house-control-config-map.yaml
+│           ├── house-control-secret.yaml
+│           ├── house-control-deployment.yaml
+│           ├── house-control-service.yaml
+│           ├── house-control-ingress.yaml
+│           ├── house-control-hpa.yaml
+│           ├── deploy.sh         # Deployment script
+│           ├── validate-ports.sh # Port validation
+│           └── README.md         # Application documentation
+│
 └── README.md                     # This file
 ```
 
 ## 🔧 Configuration Management
 
-This project uses **Kustomize** for configuration management, providing:
+This project uses **Kustomize** for application configuration and **Helm** for infrastructure components:
 
-### Benefits
-- **Hierarchical organization** - Components in separate directories
-- **Environment overlays** - Easy dev/staging/production switching
-- **DRY principles** - Shared configurations across components
-- **Version control** - All configurations tracked in Git
-- **Modular deployments** - Deploy individual components or entire stacks
+### Application Configuration (Kustomize)
+- **Environment-based overlays** - Development, staging, production
+- **ConfigMap/Secret pattern** - Consistent configuration management
+- **Resource customization** - Component-specific settings
+- **Label standardization** - Consistent labeling across resources
 
-### Key Features Used
-- **Common Labels** - Consistent labeling across all resources
-- **Image Transformations** - Environment-specific image versions
-- **ConfigMap Generators** - Dynamic configuration generation
-- **Strategic Merges** - Component-specific customizations
-- **Namespace Management** - Automatic namespace assignment
+### Infrastructure Configuration (Helm)
+- **Values-based customization** - Environment-specific values files
+- **Chart versioning** - Pinned versions for reproducible deployments
+- **Dependency management** - Automated dependency resolution
+- **Upgrade strategies** - Rolling updates with health checks
+
+### Key Configuration Features
+- **Standardized patterns** - ConfigMap and Secret follow same structure
+- **Environment variables** - Twelve-factor app compliance
+- **Service discovery** - DNS-based service communication
+- **Health monitoring** - Comprehensive health check configuration
 
 ## 📊 Monitoring & Observability
 
-### Health Checks
-All components include comprehensive health checks:
-- **Readiness probes** - Ensure services are ready to receive traffic
-- **Liveness probes** - Restart unhealthy containers
-- **Startup probes** - Handle slow-starting applications
+### Application Monitoring
+- **Spring Boot Actuator** - Built-in health checks and metrics
+- **Prometheus metrics** - Application metrics collection
+- **Custom metrics** - Business logic monitoring
+- **Distributed tracing** - Request flow tracking
 
-### Logging
-- **Structured logging** - JSON format for better parsing
-- **Log rotation** - Automatic log management
-- **Centralized logging** - Ready for log aggregation systems
-
-### Metrics
-- **Prometheus endpoints** - Built-in metrics for monitoring
-- **Custom metrics** - Application-specific monitoring
+### Infrastructure Monitoring
 - **Resource monitoring** - CPU, memory, disk usage
+- **Service health** - Database and messaging service status
+- **Network monitoring** - Inter-service communication
+- **Storage monitoring** - Persistent volume usage
+
+### Operational Features
+- **Health endpoints** - `/actuator/health` for all services
+- **Metrics endpoints** - `/actuator/metrics` for detailed metrics
+- **Log aggregation** - Structured JSON logging
+- **Alert configuration** - Prometheus alerting rules
 
 ## 🔒 Security Features
 
+### Application Security
+- **Non-root containers** - All applications run as non-privileged users
+- **Resource limits** - CPU and memory limits to prevent resource exhaustion
+- **Health checks** - Automatic restart of unhealthy containers
+- **Configuration security** - Sensitive data stored in Kubernetes Secrets
+
 ### Network Security
-- **Network Policies** - Control traffic between pods
-- **Service Mesh ready** - Istio/Linkerd integration points
-- **TLS encryption** - HTTPS for all external services
+- **Ingress-controlled access** - External access only through NGINX Ingress
+- **Service mesh ready** - Prepared for service mesh integration
+- **Namespace isolation** - Applications isolated in separate namespaces
+- **Port security** - Consistent port configuration validation
 
-### Access Control
-- **RBAC** - Role-based access control for Kubernetes
-- **ArgoCD RBAC** - Fine-grained GitOps permissions
-- **Keycloak integration** - Centralized identity management
+### Infrastructure Security
+- **Database access control** - User-based access control for databases
+- **Secret management** - Base64-encoded secrets in Kubernetes
+- **TLS/SSL ready** - HTTPS endpoints configuration
+- **Backup security** - Secure backup and restore procedures
 
-### Secrets Management
-- **Kubernetes Secrets** - Encrypted sensitive data
-- **External secret management** - Ready for HashiCorp Vault
-- **Rotation policies** - Automated secret rotation
+## �️ Troubleshooting
 
-## 💾 Backup & Recovery
+### Common Issues
 
-### Automated Backups
-- **PostgreSQL** - Daily backups with point-in-time recovery
-- **MongoDB** - Scheduled backups with retention policies
-- **Redis** - RDB snapshots with configurable intervals
-- **RabbitMQ** - Message persistence and queue mirroring
+#### Pod CrashLoopBackOff
+```bash
+# Check pod logs
+kubectl logs -n house-control -l app=house-control-container --previous
 
-### Backup Storage
-- **PVC-based** - Persistent storage for backup data
-- **External storage** - Ready for S3, GCS, Azure Blob
-- **Compression** - Optimized storage usage
+# Check pod events
+kubectl describe pod -n house-control -l app=house-control-container
 
-### Recovery Procedures
-- **Automated restore** - One-command recovery scripts
-- **Point-in-time recovery** - Restore to specific timestamps
-- **Cross-region backup** - Disaster recovery capabilities
+# Verify configuration
+kubectl exec -n house-control -it deployment/house-control -- env | grep SPRING
+```
+
+#### HPA Issues (Metrics Server)
+```bash
+# Install Metrics Server for Minikube
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# Patch for Minikube (insecure TLS)
+kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+
+# Verify metrics
+kubectl top pods -n house-control
+```
+
+#### Ingress Issues
+```bash
+# Check Ingress Controller
+kubectl get pods -n ingress-nginx
+
+# Verify Ingress configuration
+kubectl describe ingress -n house-control house-control-ingress
+
+# Test /etc/hosts configuration
+ping house-control.dev.smartcity.local
+```
+
+#### Database Connection Issues
+```bash
+# Test database connectivity
+kubectl exec -n house-control -it deployment/house-control -- nc -zv postgres.infrastructure.svc.cluster.local 5432
+
+# Check database service
+kubectl get svc -n infrastructure
+
+# Verify credentials
+kubectl get secret -n house-control house-control-secret -o yaml
+```
 
 ## 🚀 Deployment Strategies
 
-### Blue-Green Deployment
-- **Zero-downtime updates** - Switch between blue and green environments
-- **Automated rollback** - Instant rollback on failures
-- **Traffic shifting** - Gradual traffic migration
+### GitOps Workflow
+- **Git-based deployments** - All changes through Git commits
+- **ArgoCD integration** - Ready for GitOps controller setup
+- **Branch-based environments** - Different branches for different environments
+- **Pull request reviews** - Code review process for deployments
 
-### Canary Deployment
-- **Percentage-based rollout** - Deploy to percentage of users
-- **Automated analysis** - Monitor metrics during canary
-- **Automatic promotion** - Promote based on success criteria
+### Kubernetes Deployments
+- **Rolling updates** - Zero-downtime application updates
+- **Health check integration** - Automatic rollback on health check failures
+- **Resource management** - CPU and memory limits with HPA
+- **Namespace isolation** - Environment separation through namespaces
 
-### GitOps Workflows
-- **Pull Request deployments** - Deploy from Git branches
-- **Environment promotion** - Automated dev → staging → prod
-- **Approval workflows** - Manual approval for production
+### Infrastructure Deployment
+- **Helm-based infrastructure** - Infrastructure as code with Helm charts
+- **Version pinning** - Specific versions for reproducible deployments
+- **Automated scripts** - One-command infrastructure deployment
+- **Dependency management** - Proper service startup order
 
-## 🧪 Testing
+## 🧪 Testing & Validation
 
-### Component Testing
-- **Unit tests** - Individual component validation
-- **Integration tests** - End-to-end workflow testing
-- **Performance tests** - Load and stress testing
+### Port Validation
+```bash
+# Validate port consistency across all manifests
+cd gitops/dev/house-control
+./validate-ports.sh
+```
 
-### Deployment Testing
-- **Dry-run deployments** - Validate manifests without applying
-- **Canary testing** - Test deployments on subset of infrastructure
-- **Rollback testing** - Ensure rollback procedures work
+### Application Testing
+```bash
+# Test application health
+curl http://house-control.dev.smartcity.local/actuator/health
+
+# Test application metrics
+curl http://house-control.dev.smartcity.local/actuator/metrics
+
+# Load testing for HPA
+kubectl run load-generator --image=busybox --restart=Never --rm -i --tty -- /bin/sh
+```
+
+### Infrastructure Testing
+```bash
+# Test database connectivity
+kubectl exec -n house-control -it deployment/house-control -- nc -zv postgres.infrastructure.svc.cluster.local 5432
+
+# Test Redis connectivity
+kubectl exec -n house-control -it deployment/house-control -- nc -zv redis.infrastructure.svc.cluster.local 6379
+
+# Test RabbitMQ connectivity
+kubectl exec -n house-control -it deployment/house-control -- nc -zv rabbitmq.infrastructure.svc.cluster.local 5672
+```
+
+### Deployment Validation
+```bash
+# Validate Kustomize configuration
+kubectl kustomize gitops/dev/house-control
+
+# Dry-run deployment
+kubectl apply -k gitops/dev/house-control --dry-run=client
+```
 
 ## 📚 Documentation
+## 📚 Documentation
 
-### Component Documentation
-Each component includes comprehensive documentation:
-- **Architecture decisions** - Why certain choices were made
-- **Configuration options** - Available customization parameters
-- **Troubleshooting guides** - Common issues and solutions
-- **Performance tuning** - Optimization recommendations
-
-### Operational Runbooks
+### Application Documentation
+- **[House Control Application](gitops/dev/house-control/README.md)** - Complete application guide
+- **Configuration patterns** - ConfigMap and Secret management
 - **Deployment procedures** - Step-by-step deployment guides
-- **Incident response** - Handling production incidents
-- **Maintenance tasks** - Regular maintenance procedures
-- **Upgrade procedures** - Version upgrade processes
+- **Troubleshooting guides** - Common issues and solutions
 
+### Infrastructure Documentation
+- **Component deployment** - Individual infrastructure components
+- **Network configuration** - Ingress and service setup
+- **Security configuration** - Access control and secrets
+- **Monitoring setup** - Prometheus and health checks
+
+### Operational Guides
+- **Port validation** - Ensuring consistent port configuration
+- **Health monitoring** - Application and infrastructure health
+- **Scaling procedures** - Manual and automatic scaling
+- **Update procedures** - Rolling updates and rollbacks
 ## 🤝 Contributing
 
 ### Development Workflow
 1. **Fork** the repository
-2. **Create** a feature branch
-3. **Make** your changes
-4. **Test** thoroughly
-5. **Submit** a pull request
+2. **Create** a feature branch (`git checkout -b feature/new-service`)
+3. **Make** your changes following the established patterns
+4. **Test** thoroughly using provided validation scripts
+5. **Submit** a pull request with detailed description
 
 ### Code Standards
-- **Kustomize best practices** - Follow Kustomize conventions
-- **Security first** - Implement security measures
-- **Documentation** - Update docs for all changes
-- **Testing** - Include tests for new features
+- **Kustomize best practices** - Follow established Kustomize patterns
+- **Consistent configuration** - Use ConfigMap/Secret patterns
+- **Documentation** - Update README files for all changes
+- **Testing** - Include validation scripts for new components
+- **Security** - Follow security best practices
+
+### Adding New Services
+1. **Create service directory** in `gitops/dev/`
+2. **Follow naming conventions** - Use `service-name-resource-type.yaml`
+3. **Include all resources** - Namespace, ConfigMap, Secret, Deployment, Service, Ingress
+4. **Add to kustomization.yaml** - Include all resources
+5. **Create deployment script** - Include validation and health checks
+6. **Update documentation** - Add README with service-specific information
 
 ## 📄 License
 
@@ -278,16 +353,33 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🆘 Support
 
-### Issues
-- **Bug reports** - Use GitHub Issues
-- **Feature requests** - Use GitHub Discussions
-- **Security issues** - Contact maintainers directly
+### Getting Help
+- **Documentation** - Check component-specific README files
+- **Issues** - Open GitHub Issues for bugs and feature requests
+- **Discussions** - Use GitHub Discussions for questions and ideas
+- **Validation** - Use provided scripts for troubleshooting
 
-### Community
-- **Discussions** - GitHub Discussions for questions
-- **Wiki** - Community-contributed documentation
-- **Slack/Teams** - Community chat channels
+### Useful Commands
+```bash
+# Quick health check for all services
+kubectl get pods --all-namespaces
+
+# Check service connectivity
+kubectl get svc --all-namespaces
+
+# Validate Kustomize configuration
+find gitops/ -name kustomization.yaml -exec dirname {} \; | xargs -I {} sh -c 'echo "=== {} ===" && kubectl kustomize {}'
+
+# Port validation
+find gitops/ -name validate-ports.sh -exec {} \;
+```
+
+### Common Resources
+- **Kubernetes Documentation** - https://kubernetes.io/docs/
+- **Kustomize Documentation** - https://kustomize.io/
+- **Helm Documentation** - https://helm.sh/docs/
+- **NGINX Ingress** - https://kubernetes.github.io/ingress-nginx/
 
 ---
 
-**Happy deploying! 🚀**
+**Happy deploying with GitOps! 🚀**
